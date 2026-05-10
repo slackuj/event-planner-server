@@ -17,13 +17,18 @@ export interface User {
     profile_picture: string; // profile picture url
 }
 
+export interface UpdateUserRequest {
+    name: string;
+    profile_picture: string;
+}
+
 export interface AuthenticatedUser {
-    id: string;
+    id: number;
     email: string;
 }
 
 export interface UserSession {
-    user_id: string;
+    user_id: number;
     refresh_token: string;
     expires_at: Date;
 }

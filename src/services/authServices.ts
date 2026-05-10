@@ -15,7 +15,7 @@ import {
 import {otpExpiryDate} from "../utils/otpUtil";
 import {logger} from "../utils/logger";
 import {database} from "../configurations/db";
-import {Token, User} from "../types/user";
+import {Token, User, UserSession} from "../types/user";
 
 type registerData = Omit<UserRegisterRequest, "confirm_password">;
 export const register = async (data: registerData, code: string) => {
@@ -119,131 +119,147 @@ export const confirmNewUser = async (data: UserConfirmationRequest) => {
 
 
 
-/*
 // resends a new confirmation code
 export const resendConfirmationCode = async (data: SendConfirmationCodeRequest) => {
     const { email } = data;
-    const existingUser = await UserModel.exists({ email: email });
-    if (existingUser) {
-        logger.warn(`[AUTH-SERVICES] [CONFIRMATION CODE] Confirmation code requested for confirmed user: ${email}`);
-        throw new Error("User already exists");
+
+    // Find the user
+    const user = await database<Pick<User, 'id' | 'role'>>("users")
+        .select("id", "role")
+        .where({ email })
+        .first();
+
+    if (!user) {
+        logger.warn(`[AUTH-SERVICES] [RESEND-CODE] Attempt for non-existent user: ${email}`);
+        throw new Error("User not found");
     }
 
-    const existingUnconfirmedUser = await UnconfirmedUserModel.findOne({ email });
-    if (existingUnconfirmedUser) {
-        existingUnconfirmedUser.confirmationCode = await mailServices.sendNewAccountConfirmationEmail(email);
-        existingUnconfirmedUser.expiresAt = otpExpiryDate();
-        // save changes
-        await existingUnconfirmedUser.save();
-        return existingUnconfirmedUser;
-
-    } else {
-        logger.error(`[AUTH-SERVICES] [CONFIRMATION CODE] Confirmation requested for unregistered user: ${email}`);
-        throw new Error("User not registered");
+    // Check if the user is already confirmed
+    if (user.role === "USER") {
+        logger.warn(`[AUTH-SERVICES] [RESEND-CODE] Attempt for already confirmed user: ${email}`);
+        throw new Error("Account is already confirmed. Please log in.");
     }
+
+    await database.transaction(async (trx) => {
+        // Insert the new code
+        await trx("token_table").insert({
+            confirmation_code: code,
+            user_id: user.id,
+            expires_at: otpExpiryDate(),
+        });
+    });
+
+    // 4. Send the new code via email
+    const code = await mailServices.sendNewAccountConfirmationEmail(email);
+
+    logger.info(`[AUTH-SERVICES] [RESEND-CODE] New code sent to: ${email}`);
+    return code;
 };
 
 export const login = async (data: UserLoginRequest) => {
-
     const { email, password } = data;
 
-    const [authUser, incompleteUser] = await Promise.all([
-        UserModel.findOne({ email }).select("+password"),
-        IncompleteUserModel.findOne({ email }).select("+password")
-    ]);
-    const user = authUser || incompleteUser;
+    // Find user by email
+    const user = await database<User>("users")
+        .where({ email })
+        .first();
 
     if (!user) {
-        // should the error message be implicit ?
-        logger.error("[AUTH-SERVICES] [LOGIN] Login failed: User not found");
-        throw new Error("The email you entered isn't connected to an account");
-    }
-    // HANDLE DELETED USERS
-    if (authUser?.shouldDelete){
-        return {
-            expiresAt: authUser.expiresAt!.getTime(),
-            next: "/recoverMe",
-            email: email,
-        };
+        logger.warn(`[AUTH-SERVICES] [LOGIN] User not found: ${email}`);
+        throw new Error("The email or password you entered is incorrect.");
     }
 
-    //console.log(password);
-    //console.log(user);
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-        logger.warn(`[AUTH-SERVICES] [LOGIN] Unauthorized login attempt for: ${email}`);
-        throw new Error("The password you entered is incorrect.");
+    if (user.role === "UNCONFIRMED") {
+        // next(/confirmMe) + message
+        logger.warn(`[AUTH-SERVICES] [LOGIN] Unconfirmed User's login attempt: ${email}`);
+        throw new Error("Please confirm your account before logging in.");
     }
 
-    const isIncompleteUser = !!incompleteUser;
-    const accessToken = generateAccessToken(user);
-    const refreshToken = generateRefreshToken(user);
-    try {
-        const refreshTokenData = jwt.verify(refreshToken, config.JWT_SECRET_REFRESH) as JwtPayload;
-        const expiresAt = new Date(refreshTokenData.exp! * 1000);
-        await sessionServices.createSession({
-            userId: user.id,
-            refreshToken,
-            expiresAt
-        });
-        return {
-            accessToken,
-            refreshToken,
-            isIncompleteUser: isIncompleteUser
-        };
-    } catch (error) {
-        logger.error(`[AUTH-SERVICES] [LOGIN] Session init failed for ${user.id}:`, error);
-        throw new Error("Failed to initialize session. Please try again.");
+    // Verify Password
+    const isPasswordMatched = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatched) {
+        logger.warn(`[AUTH-SERVICES] [LOGIN] Invalid password for: ${email}`);
+        throw new Error("The email or password you entered is incorrect.");
     }
+
+    // Generate Tokens
+    const accessToken = generateAccessToken({id: user.id, email: user.email});
+    const refreshToken = generateRefreshToken({id: user.id, email: user.email});
+
+    const refreshTokenData = jwt.verify(refreshToken, config.JWT_SECRET_REFRESH) as JwtPayload;
+    const expiresAt = new Date(refreshTokenData.exp! * 1000);
+
+    await sessionServices.createSession({
+        user_id: user.id,
+        refresh_token: refreshToken,
+        expires_at: expiresAt
+    });
+
+    logger.info(`[AUTH-SERVICES] [LOGIN] User logged in: ${email}`);
+
+    // Return tokens and user info (excluding password)
+    const { password: _, ...rest } = user;
+    return {
+        accessToken,
+        refreshToken,
+        user: rest
+    };
 };
 
+// refresh user
 export const refreshAccessToken = async (refreshToken: string) => {
-    // 1. Verify the signature and expiration of the refresh token
-    let payload: JwtPayload;
+    // Verify the Refresh Token signature and expiration
+    let decoded: JwtPayload;
     try {
-        payload = jwt.verify(refreshToken, config.JWT_SECRET_REFRESH) as JwtPayload;
+        decoded = jwt.verify(refreshToken, config.JWT_SECRET_REFRESH) as JwtPayload;
     } catch (error) {
-        logger.error(`[AUTH-SERVICES] [REFRESH] Invalid or expired refresh token`);
-        throw new Error("Invalid or expired refresh token");
+        logger.error(`[AUTH-SERVICES] [REFRESH] Invalid refresh token signature`);
+        throw new Error("Invalid refresh token");
     }
 
-    // 2. Check if the session exists in the DB (Stateful check)
-    const session = await sessionServices.findSessionByToken(refreshToken);
+    // Check if the session exists in the database
+    // This allows for "Revocation" - if the row is gone, the token is invalid
+    const session = await database<UserSession>("user_sessions")
+        .where({ refresh_token: refreshToken })
+        .first();
+
     if (!session) {
-        logger.error(`[AUTH-SERVICES] [REFRESH] Session not found`);
-        throw new Error("Session not found");
+        logger.warn(`[AUTH-SERVICES] [REFRESH] Session not found or revoked`);
+        throw new Error("Session expired or revoked");
     }
 
-    const [authUser, incompleteUser] = await Promise.all([
-        UserModel.findById(payload.userId),
-        IncompleteUserModel.findById(payload.userId)
-    ]);
-    const user = authUser || incompleteUser;
+    // Fetch the user
+    const user = await database<User>("users")
+        .where({ id: decoded.user_id })
+        .first();
 
     if (!user) {
-        throw new Error("No Active Account Found");
+        logger.error(`[AUTH-SERVICES] [REFRESH] User not found for session: ${session.user_id}`);
+        throw new Error("User no longer exists");
     }
 
-    const newAccessToken = generateAccessToken(user);
-    const newRefreshToken = generateRefreshToken(user);
-    try {
-        const refreshTokenData = jwt.verify(newRefreshToken, config.JWT_SECRET_REFRESH) as JwtPayload;
-        const expiresAt = new Date(refreshTokenData.exp! * 1000);
-        await sessionServices.createSession({
-            userId: user.id,
-            refreshToken: newRefreshToken,
-            expiresAt
-        });
-        // delete old refresh token and return
-        await sessionServices.deleteSessionByToken(refreshToken);
-        return {
-            accessToken: newAccessToken,
-            refreshToken: newRefreshToken
-        };
-    } catch (error) {
-        logger.error(`[AUTH-SERVICES] [REFRESH] Session Initialization failed`);
-        throw new Error("Failed to initialize session. Please try again.");
-    }
+    // new tokens
+    const newRefreshToken = generateRefreshToken({id: user.id, email: user.email});
+    const newAccessToken = generateAccessToken({id: user.id, email: user.email});
+
+    const refreshTokenData = jwt.verify(refreshToken, config.JWT_SECRET_REFRESH) as JwtPayload;
+    const expiresAt = new Date(refreshTokenData.exp! * 1000);
+
+    await sessionServices.createSession({
+        user_id: user.id,
+        refresh_token: refreshToken,
+        expires_at: expiresAt
+    });
+
+    // delete old session
+    await sessionServices.deleteSessionByToken(refreshToken);
+
+    logger.info(`[AUTH-SERVICES] [REFRESH] Access token rotated for user: ${user.email}`);
+
+    return {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+    };
 };
 
 
@@ -251,62 +267,52 @@ export const logout = async (refreshToken: string) => {
     await sessionServices.deleteSessionByToken(refreshToken);
 };
 
-export const updatePassword = async (data: Omit<PasswordUpdateRequest, 'confirmNewPassword'>) => {
-
-    const { email, oldPassword, newPassword } = data;
-    const [authUser, incompleteUser] = await Promise.all([
-        UserModel.findOne({ email }).select("+password"),
-        IncompleteUserModel.findOne({ email }).select("+password")
-    ]);
-    const user = authUser || incompleteUser;
+export const updatePassword = async (data: Omit<PasswordUpdateRequest, 'confirm_new_password'>) => {
+    const { email, old_password, new_password } = data;
+    // Fetch the user
+    const user = await database<User>("users")
+        .where({ email })
+        .select("password", "id")
+        .first();
 
     if (!user) {
-        logger.warn(`[AUTH-SERVICES] [LOGOUT] unregistered user: ${email} trying to log in`);
-        throw new Error("The email you entered isn't connected to an account");
+        throw new Error("User not found");
     }
 
-    const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
-    if (!isPasswordValid) {
-        logger.error(`[AUTH-SERVICES] [LOGOUT] Incorrect password for user: ${email}`);
-        throw new Error("The password you entered is incorrect.");
+    // Verify the old password
+    const isMatched = await bcrypt.compare(old_password, user.password);
+    if (!isMatched) {
+        throw new Error("Invalid current password");
     }
 
-    // update password
-    const hashed_password = await bcrypt.hash(newPassword, SALT_ROUNDS );
-    let updatedUser;
-    const isIncompleteUser =  !!incompleteUser;
+    // Hash the new password
+    const hashedNewPassword = await bcrypt.hash(new_password, SALT_ROUNDS);
 
-    if (isIncompleteUser) {
-        // findOneAndUpdate( filter, update, options )
-        updatedUser = await IncompleteUserModel.findOneAndUpdate(
-            { email: email },
-            { password: hashed_password },
-            { returnDocument: "after" },
-        );
-    } else {
-        updatedUser = await UserModel.findOneAndUpdate(
-            { email: email },
-            { password: hashed_password },
-            { returnDocument: "after" },
-        );
-    }
-    const newAccessToken = generateAccessToken(updatedUser!);
-    const newRefreshToken = generateRefreshToken(updatedUser!);
+    const newAccessToken = generateAccessToken({id: user.id, email});
+    const newRefreshToken = generateRefreshToken({id: user.id, email});
 
-    // discard all old sessions
-    await sessionServices.deleteSessionsById(user.id);
+    await database.transaction(async (trx) => {
+        // Update the password
+        await trx("users")
+            .where({ id: user.id })
+            .update({ password: hashedNewPassword, updated_at: new Date() });
 
-    // create new session and return
-    const refreshTokenData = jwt.verify(newRefreshToken, config.JWT_SECRET_REFRESH) as JwtPayload;
-    const expiresAt = new Date(refreshTokenData.exp! * 1000);
-    await sessionServices.createSession({
-        userId: user.id,
-        refreshToken: newRefreshToken,
-        expiresAt
+        // delete all sessions
+        await sessionServices.deleteSessionsByUserId(user.id);
+
+        // create new session
+        const refreshTokenData = jwt.verify(newRefreshToken, config.JWT_SECRET_REFRESH) as JwtPayload;
+        const expiresAt = new Date(refreshTokenData.exp! * 1000);
+        await sessionServices.createSession({
+            user_id: user.id,
+            refresh_token: newRefreshToken,
+            expires_at: expiresAt
+        });
     });
+
     logger.info(`[AUTH-SERVICES] [UPDATE PASSWORD] Password updated for user: ${email}`);
     return {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken
     };
-};*/
+};

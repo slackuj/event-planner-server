@@ -32,6 +32,15 @@ export const deleteSessionByToken = async (refresh_token: string) => {
     logger.info(`[SESSION-SERVICES] [DELETE BY TOKEN] user sessions deleted`);
 };
 
+// delete sessions by userId
+export const deleteSessionsByUserId = async (user_id: number) => {
+    await database("user_sessions")
+        .where({ user_id: user_id })
+        .del();
+
+    logger.info(`[SESSION-SERVICES] [DELETE BY TOKEN] user sessions deleted`);
+};
+
 /**
  * Finds a session by its refresh token.
  */

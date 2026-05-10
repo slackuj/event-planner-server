@@ -19,7 +19,7 @@ export const generateRefreshToken = (user : AuthenticatedUser) => (
     jwt.sign(
         {
             exp: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,// 30 days
-            userId: user.id,
+            user_id: user.id,
         },
         config.JWT_SECRET_REFRESH,
     )
