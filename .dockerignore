@@ -1,0 +1,17 @@
+# Ignore git metadata
+.git
+.gitignore
+
+# Ignore build artifacts and dependencies
+node_modules/
+dist/
+.idea/
+
+# Ignore logs and temp files
+*.log
+tmp/
+
+# Ignore Docker-related files
+Dockerfile
+.dockerignore
+compose.yaml/

@@ -1,0 +1,43 @@
+{
+  "name": "nodejs-typescript-template",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc --build",
+    "start": "npm run build && node dist/index.js",
+    "docker:up": "docker-compose up -d",
+    "migrate:latest": "knex migrate:latest --knexfile knexfile.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@sendgrid/mail": "^8.1.6",
+    "@types/bcrypt": "^6.0.0",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/morgan": "^1.9.10",
+    "@types/node": "^25.3.5",
+    "@types/winston": "^2.4.4",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cloudinary": "^2.10.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "knex": "^3.2.10",
+    "morgan": "^1.10.1",
+    "mysql2": "^3.22.3",
+    "ts-node": "^10.9.2",
+    "winston": "^3.19.0",
+    "zod": "^4.3.6"
+  }
+}
