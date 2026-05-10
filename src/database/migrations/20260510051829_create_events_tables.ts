@@ -9,7 +9,7 @@ export async function up(knex: Knex): Promise<void> {
             table.timestamp("event_date").notNullable();
             table.string("location");
             table.integer("organizer_id").unsigned().references("id").inTable("users").onDelete("CASCADE");
-            table.boolean("is_public").defaultTo(true);
+            table.boolean("is_public").defaultTo(false);
             table.timestamps(true, true);
 
             table.check("length(title) >= 5", [], "title_should_be_at_least_5_characters_long");

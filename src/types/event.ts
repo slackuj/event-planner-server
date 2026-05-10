@@ -5,7 +5,7 @@ interface Event {
     title: string;
     description: string;
     event_date: Date;
-    location: string;
+    location: number;
     organizer_id: string;
     is_public: boolean;
 }
@@ -15,6 +15,11 @@ interface EventParticipant {
     event_id: number;
     user_id: number;
     rsvp: RSVP;
+}
+
+interface EventLocation {
+    id: number;
+    location: string;
 }
 
 interface EventTag {
