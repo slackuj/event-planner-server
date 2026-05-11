@@ -48,8 +48,8 @@ export const register = async (data: registerData, code: string) => {
                 email,
                 password: hashed_password,
                 name
-            })
-            .returning(["id"]);
+            });
+            //.returning(["id"]); // MySQL does not support returning
 
         if (!new_user) {
             throw new Error("Registration failed!");
@@ -57,7 +57,7 @@ export const register = async (data: registerData, code: string) => {
         // Create the confirmation token record
         await trx("token_table").insert({
             confirmation_code: code,
-            user_id: new_user.id,
+            user_id: new_user,
             expires_at: otpExpiryDate(),
         });
 

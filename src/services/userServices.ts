@@ -23,17 +23,17 @@ export const fetchUserById = async (user_id: number) => {
  * Updates user profile details (name, profile_picture, etc.)
  */
 export const updateUserById = async (user_id: number, data: Partial<UpdateUserRequest>) => {
-    const [updatedUser] = await database<User>("users")
+    // HANDLE ROW === 0 LATER
+    const updatedRow = await database<User>("users")
         .where({ id: user_id })
-        .update(data)
-        .returning("*"); // Returns the updated record
+        .update(data);
 
+    const updatedUser = await fetchUserById(user_id);
     if (!updatedUser) {
         logger.error(`[USER-SERVICES] [UPDATE] Failed to update non-existent user: ${user_id}`);
         throw new Error("User does not exist!");
     }
 
-    const { password, ...UpdatedUser } = updatedUser;
-    logger.info(`[USER-SERVICES] [UPDATE BY ID] user updated: ${user_id}`);
-    return UpdatedUser;
+    logger.info(`[USER-SERVICES] [UPDATE-BY-ID] user updated: ${user_id}`);
+    return updatedUser;
 };

@@ -15,6 +15,7 @@ export interface User {
     password: string; // hashed password
     role: Role; // user role
     profile_picture: string; // profile picture url
+    updated_at?: Date;
 }
 
 export interface UpdateUserRequest {

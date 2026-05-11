@@ -14,8 +14,7 @@ export const createSession = async (data: UserSession) => {
             user_id: user_id,
             refresh_token: refresh_token,
             expires_at: expires_at,
-        })
-        .returning("*");
+        });
 
     logger.info(`[SESSION-SERVICES] [CREATE] session created: user: ${user_id}`);
     return session;
