@@ -11,6 +11,26 @@ export interface Event {
     updated_at?: Date;
 }
 
+export interface EventWithLocationAndOrganizer {
+    id: number;
+    title: string;
+    description: string;
+    event_date: Date;
+    location_name: string | null;
+    organizer_email: string;
+    organizer_profile_picture: string;
+    is_public: boolean;
+}
+
+export interface AllEventsResponse {
+    id: number;
+    title: string;
+    event_date: Date;
+    organizer_email: string;
+    organizer_profile_picture: string;
+    rsvp?: RSVP;
+}
+
 // service data
 export interface CreateEventData extends Omit<Event, 'id' | 'location_id'> {
     location_name: string | null;
@@ -24,10 +44,19 @@ export interface UpdateEventLocationRequest {
 }
 
 
-interface EventParticipant {
+export interface EventParticipant {
     id: number;
     event_id: number;
     user_id: number;
+    rsvp: RSVP;
+}
+
+export interface EventParticipantResponse {
+    id: number;
+    event_id: number;
+    user_id: number;
+    user_email: string;
+    user_profile_picture: string;
     rsvp: RSVP;
 }
 

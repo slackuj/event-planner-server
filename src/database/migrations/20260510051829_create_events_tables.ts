@@ -48,7 +48,10 @@ export async function up(knex: Knex): Promise<void> {
             table.increments("id").primary();
             table.integer("event_id").unsigned().references("id").inTable("events").onDelete("CASCADE");
             table.integer("user_id").unsigned().references("id").inTable("users").onDelete("CASCADE");
-            table.enum("rsvp", ["YES", "NO", "MAYBE", "WAITING"]).defaultTo("WAITING");
+            table.enum("rsvp", ["YES", "NO", "MAYBE", "WAITING"]).defaultTo("WAITING")
+
+            // user can participate in an event only once !!!
+            table.unique(["event_id", "user_id"]);
         })
         // User Event Tags
         .createTable("user_event_tags", (table) => {

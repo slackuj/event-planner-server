@@ -1,7 +1,10 @@
 import {
+    AllEventsResponse,
     CreateEventData,
     CreateUserEventTagRequest,
     Event,
+    EventParticipant, EventParticipantResponse,
+    EventWithLocationAndOrganizer,
     UpdateEventLocationRequest,
     UpdateEventRequest
 } from "../types/event";
@@ -10,7 +13,7 @@ import slugify from "slugify";
 import * as tagsServices from "./tagsServices";
 import {Knex} from "knex";
 import {logger} from "../utils/logger";
-import {EventTagsQueryParams} from "../types/QueryParams";
+import {AllEventsQueryParams, EventTagsQueryParams} from "../types/QueryParams";
 
 export const createEvent = async (data: CreateEventData) => {
     const { title, description, event_date, organizer_id, is_public } = data;
@@ -111,18 +114,129 @@ export const deleteEventLocationById = async(event_id: number) => {
     return await tagsServices.deleteUserLocationTag(event.organizer_id, event.location_id!)
 };
 
+// delete event by id
+export const deleteEventByID = async(event_id: number) => {
+    const result = await database<Event>("events")
+        .where({id: event_id})
+        .del();
+
+    if (result === 0) return "nothing to delete";
+};
+
+// fetchAllEvents
+export const fetchAllEvents = async (user_id: string, params: AllEventsQueryParams) => {
+
+    const { isParticipating, isRequested, isOrganized } = params;
+    let events: AllEventsResponse[] = [];
+    if (isOrganized) {
+        // fetch all organized events by the user
+        events = await database("events")
+            .select<AllEventsResponse[]>(
+                "events.id",
+                "events.title",
+                "events.event_date",
+                "users.email as organizer_email",
+                "users.profile_picture as organizer_profile_picture"
+            )
+            // leftJoin because location_id is nullable in your migration
+            .leftJoin("location_tags", "events.location_id", "location_tags.id")
+            // inner join because organizer_id is notNullable
+            .join("users", "events.organizer_id", "users.id")
+            .where("events.organizer_id", user_id);
+    }
+    else if (!isParticipating) {
+        // fetch all published events
+        events = await database("events")
+            .select<AllEventsResponse[]>(
+                "events.id",
+                "events.title",
+                "events.event_date",
+                "users.email as organizer_email",
+                "users.profile_picture as organizer_profile_picture"
+            )
+            // leftJoin because location_id is nullable in your migration
+            .leftJoin("location_tags", "events.location_id", "location_tags.id")
+            // inner join because organizer_id is notNullable
+            .join("users", "events.organizer_id", "users.id")
+            .where("events.is_public", true);
+    }
+    else {
+        if (isRequested) {
+            // return requested events
+            events = await database("events")
+                .select<AllEventsResponse[]>(
+                    "events.id",
+                    "events.title",
+                    "events.event_date",
+                    "users.email as organizer_email",
+                    "users.profile_picture as organizer_profile_picture",
+                    "event_participants.rsvp"
+                )
+                .join("event_participants", "events.id", "event_participants.event_id")
+                // leftJoin because location_id is nullable in your migration
+                .leftJoin("location_tags", "events.location_id", "location_tags.id")
+                // inner join because organizer_id is notNullable
+                .join("users", "events.organizer_id", "users.id")
+                .where("event_participants.user_id", user_id)
+                .andWhere("event_participants.rsvp", "AWAITING");
+        } else {
+            // return participating events
+            events = await database("events")
+                .select<AllEventsResponse[]>(
+                    "events.id",
+                    "events.title",
+                    "events.event_date",
+                    "users.email as organizer_email",
+                    "users.profile_picture as organizer_profile_picture",
+                    "event_participants.rsvp"
+                )
+                .join("event_participants", "events.id", "event_participants.event_id")
+                // leftJoin because location_id is nullable in your migration
+                .leftJoin("location_tags", "events.location_id", "location_tags.id")
+                // inner join because organizer_id is notNullable
+                .join("users", "events.organizer_id", "users.id")
+                .where("event_participants.user_id", user_id)
+                .andWhereNot("event_participants.rsvp", "AWAITING");
+        }
+    }
+
+
+    // handle error
+    if (!events) {
+        throw new Error("Failed to retrieve events.");
+    }
+
+    return events;
+};
+
 // is it required to fetch inside transaction ? HANDLE LATER
-export const fetchEventById = async (id: number, trx?: Knex.Transaction) => {    // Use the passed trx if it exists, otherwise fall back to the main database instance
-    const queryBuilder = trx ? trx<Event>("events") : database<Event>("events");
+export const fetchEventById = async (id: number, trx?: Knex.Transaction) => {
+    // Use the passed trx if it exists, otherwise fall back to the main database instance
+    const queryBuilder = trx ? trx("events") : database("events");
+
     const event = await queryBuilder
-        .where({id})
+        .select<EventWithLocationAndOrganizer>(
+            "events.id",
+            "events.title",
+            "events.description",
+            "events.event_date",
+            "events.is_public",
+            "events.created_at",
+            "location_tags.name as location_name",
+            "users.email as organizer_email",
+            "users.profile_picture as organizer_profile_picture"
+        )
+        // leftJoin because location_id is nullable in your migration
+        .leftJoin("location_tags", "events.location_id", "location_tags.id")
+        // inner join because organizer_id is notNullable
+        .join("users", "events.organizer_id", "users.id")
+        .where("events.id", id)
         .first();
 
     if (!event) {
         throw new Error("Failed to retrieve event.");
     }
 
-    // PERFORM POPULATION/JOIN LATER TO RETURN DATA INSTEAD OF ID'S
     return event;
 };
 
@@ -159,3 +273,44 @@ export const addEventUserTagById = async(data: CreateUserEventTagRequest, params
         // fetch all event_tags
     return await tagsServices.fetchAllEventTagsById(event_id, user_id, organizer_id, params);
 }
+
+/*************************************************************************************************/
+/************************* SERVICES FOR EVENT PARTICIPANTS ***************************************/
+/*************************************************************************************************/
+
+// upsert event participation by user_id
+// /events/:id/participation/:userId
+export const upsertEventParticipationByUserId = async(data: Omit<EventParticipant, 'id'>) => {
+    await database<EventParticipant>("event_participants").upsert(data);
+    return await fetchEventParticipation({user_id: data.user_id, event_id: data.event_id});
+};
+
+export const fetchEventParticipation = async(data: Omit<EventParticipant, 'id' | 'rsvp'>) => {
+    return database<EventParticipant>("event_participants")
+        .join("users", "users.id", "event_participants.user_id")
+        .select<EventParticipantResponse>(
+            "event_participants.*",
+            "users.email as user_email",
+            "users.profile_picture as user_profile_picture"
+        )
+        // check if we can use .where(data) !!!
+        .where("event_participants.event_id", data.event_id)
+        .andWhere("event_participants.user_id", data.user_id)
+        .first();
+};
+
+export const fetchAllEventParticipationByEventId = async(event_id: number) => {
+    return database<EventParticipant>("event_participants")
+        .join("users", "users.id", "event_participants.user_id")
+        .select<EventParticipantResponse[]>(
+            "event_participants.*",
+            "users.email as user_email",
+            "users.profile_picture as user_profile_picture"
+        )
+        .where("event_participants.event_id", event_id);
+};
+
+export const removeEventParticipationById = async(id: number) => {
+    const result = await database<EventParticipant>("event_participants").where({id}).del();
+    if (result === 0) return "nothing to delete";
+};
