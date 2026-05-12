@@ -18,7 +18,7 @@ import {database} from "../configurations/db";
 import {Token, User, UserSession} from "../types/user";
 
 type registerData = Omit<UserRegisterRequest, "confirm_password">;
-export const register = async (data: registerData, code: string) => {
+export const register = async (data: registerData) => {
     const { name, email, password } = data;
 
     // Check if User exists
@@ -54,14 +54,19 @@ export const register = async (data: registerData, code: string) => {
         if (!new_user) {
             throw new Error("Registration failed!");
         }
+        // send email
+        const generatedOTP = await mailServices.sendNewAccountConfirmationEmail(email);
+        const expires_at = otpExpiryDate();
+
         // Create the confirmation token record
         await trx("token_table").insert({
-            confirmation_code: code,
+            confirmation_code: generatedOTP,
             user_id: new_user,
-            expires_at: otpExpiryDate(),
+            expires_at
         });
 
         logger.info(`[AUTH-SERVICES] [REGISTER] User created (unconfirmed): ${email}`);
+        return { email, expires_at };
     });
 };
 
@@ -85,6 +90,7 @@ export const confirmNewUser = async (data: UserConfirmationRequest) => {
     }
 
     // Validate Token Expiration
+    // can we use token.expires_at only ?
     if (new Date() > new Date(token.expires_at)) {
         logger.warn(`[AUTH-SERVICES] [CONFIRMATION] Code expired for user: ${email}`);
         throw new Error("Code Expired");
@@ -140,20 +146,19 @@ export const resendConfirmationCode = async (data: SendConfirmationCodeRequest) 
         throw new Error("Account is already confirmed. Please log in.");
     }
 
-    await database.transaction(async (trx) => {
+    // Send the new code via email
+    const code = await mailServices.sendNewAccountConfirmationEmail(email);
+    const expires_at = otpExpiryDate();
+
         // Insert the new code
-        await trx("token_table").insert({
+        await database("token_table").insert({
             confirmation_code: code,
             user_id: user.id,
-            expires_at: otpExpiryDate(),
+            expires_at
         });
-    });
-
-    // 4. Send the new code via email
-    const code = await mailServices.sendNewAccountConfirmationEmail(email);
 
     logger.info(`[AUTH-SERVICES] [RESEND-CODE] New code sent to: ${email}`);
-    return code;
+    return {email, expires_at};
 };
 
 export const login = async (data: UserLoginRequest) => {
@@ -172,7 +177,7 @@ export const login = async (data: UserLoginRequest) => {
     if (user.role === "UNCONFIRMED") {
         // next(/confirmMe) + message
         logger.warn(`[AUTH-SERVICES] [LOGIN] Unconfirmed User's login attempt: ${email}`);
-        throw new Error("Please confirm your account before logging in.");
+        return await resendConfirmationCode({email});
     }
 
     // Verify Password

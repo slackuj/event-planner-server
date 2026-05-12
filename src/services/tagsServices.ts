@@ -4,7 +4,7 @@ import {
     CreateUserEventTagData,
     CreateUserLocationTagRequest,
     EventTag,
-    EventTags,
+    EventTagResponse,
     LocationTag,
     UserEventTag,
     UserLocationTag
@@ -47,9 +47,9 @@ export const deleteUserLocationTag = async(user_id: number, tag_id: number) => {
         .where({user_id, tag_id})
         .del();
 
-    if (result === 0) return "nothing to delete";
-    // THIS SHOULD SET LOCATION ID === NULL IN EVENTS TABLE ---> cross check it !!!
-    return result;
+    if (result === 0) {
+        logger.info(`[TAGS-SERVICES] [DELETE-USER-LOCATION-TAG] nothing to delete for user: ${user_id} and location_id: ${tag_id}`);
+    }
 }
 
 export const fetchLocationTagId = async(name: string, trx?: Knex.Transaction) => {
@@ -93,6 +93,7 @@ export const upsertUserEventTag = async(data: CreateUserEventTagData, trx?: Knex
         });
 };
 
+// fetches events_tag.tag_id
 export const fetchEventTagId = async(name: string, trx?: Knex.Transaction) => {
     const slug = slugify(name.trim(), {lower: true, strict: true});
     const queryBuilder = trx ? trx<EventTag>("event_tags") : database<EventTag>("event_tags");
@@ -108,19 +109,41 @@ export const fetchEventTagId = async(name: string, trx?: Knex.Transaction) => {
 }
 
 export const fetchAllEventTagsById = async(event_id: number, user_id: number, organizer_id: number, params: EventTagsQueryParams) => {
-    const { fetchEventTags = true } = params;
+    const { fetchEventOrganizersTags } = params;
     let User_Id: number;
-    if (fetchEventTags) User_Id = organizer_id;
+    if (fetchEventOrganizersTags) User_Id = organizer_id;
     // else fetch participant tags
     else User_Id = user_id;
     // HANDLE LATER
 
-    // return event tags ( tags set by organizer)
-    return database<EventTag>("event_tags")
-        .join("user_event_tags", "event_tags.id", "=", "user_event_tags.tag_id")
+    // return event tags ( tags set by organizer or participant)
+    return database("event_tags")
+        //.join("user_event_tags", "event_tags.id", "=", "user_event_tags.tag_id")
+        .join("user_event_tags", "event_tags.id", "user_event_tags.tag_id")
         .where("user_event_tags.user_id", User_Id)
-        .select<EventTags[]>("event_tags.name");
+        .andWhere("user_event_tags.event_id", event_id)
+        .select<EventTagResponse[]>("event_tags.name");
 };
+
+/*// fetch event_tag by event_id
+// DOESN'T MAKES SENSE, ONE EVENT HAS MANY TAGS...AND HOW TO SELECT ONLY ONE TAG???
+export const fetchEventTagById = async(event_id: number, user_id: number, organizer_id: number, params: EventTagsQueryParams) => {
+    const { fetchEventOrganizersTags } = params;
+    let User_Id: number;
+    if (fetchEventOrganizersTags) User_Id = organizer_id;
+    // else fetch participant tags
+    else User_Id = user_id;
+    // HANDLE LATER
+
+    // return event tags ( tags set by organizer or participant)
+    return database("event_tags")
+        //.join("user_event_tags", "event_tags.id", "=", "user_event_tags.tag_id")
+        .join("user_event_tags", "event_tags.id", "user_event_tags.tag_id")
+        .where("user_event_tags.user_id", User_Id)
+        .andWhere("user_event_tags.event_id", event_id)
+        .select<EventTagResponse>("event_tags.name", "event_tags.id")
+        .first();
+};*/
 
 // delete user_event_tag : tage === tag_name
 export const deleteUserEventTag = async(user_id: number, tag: string) => {

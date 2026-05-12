@@ -37,7 +37,7 @@ export interface CreateEventData extends Omit<Event, 'id' | 'location_id'> {
 }
 
 // client request
-export type CreateEventRequest = Omit<CreateEventData, 'organizer_id'>;
+export type CreateEventRequest = Omit<CreateEventData, 'organizer_id' | 'updated_at'>;
 export type UpdateEventRequest = Partial<Omit<CreateEventRequest, 'location_name'>>;
 export interface UpdateEventLocationRequest {
     location_name: string;
@@ -84,9 +84,7 @@ export interface EventTag {
     updated_at?: Date;
 }
 
-export interface EventTags {
-    tag: string;
-}
+export type EventTagResponse = Omit<EventTag, 'id' | 'updated_at' | 'slug'>;
 
 export interface UserEventTag{
     id: number;

@@ -15,7 +15,7 @@ import {Knex} from "knex";
 import {logger} from "../utils/logger";
 import {AllEventsQueryParams, EventTagsQueryParams} from "../types/QueryParams";
 
-export const createEvent = async (data: CreateEventData) => {
+export const create = async (data: CreateEventData) => {
     const { title, description, event_date, organizer_id, is_public } = data;
     return await database.transaction(async (trx) => {
 
@@ -59,15 +59,15 @@ export const createEvent = async (data: CreateEventData) => {
     });
 };
 
-// updates : title, description, event_date, is_public, updated_at
+// updates : title, description, event_date, is_public, updated_at using event_id
 export const updateEventById = async (data: UpdateEventRequest, event_id: number) => {
-    const updatedRow = await database<Event>("events").update(data).where({id: event_id});
-    if (updatedRow === 0) return null;
+    await database<Event>("events").update(data).where({id: event_id});
+    //if (updatedRow === 0) return null;
     return await fetchEventById(event_id);
 };
 
 // updates event's location : add or update
-export const updateEventLocation = async (data: UpdateEventLocationRequest, event_id: number, organizer_id: number) => {
+export const updateEventLocationById = async (data: UpdateEventLocationRequest, event_id: number, organizer_id: number) => {
 
     const { location_name } = data;
     const slug = slugify(location_name, {lower: true, strict: true});
@@ -93,8 +93,8 @@ export const updateEventLocation = async (data: UpdateEventLocationRequest, even
             }
 
         // Update the Event Location
-        const updatedRow = await database<Event>("events").update({location_id}).where({id: event_id});
-        if (updatedRow === 0) return null;
+        await database<Event>("events").update({location_id}).where({id: event_id});
+        //if (updatedRow === 0) return null;
         return await fetchEventById(event_id, trx);
     });
 };
@@ -115,7 +115,7 @@ export const deleteEventLocationById = async(event_id: number) => {
 };
 
 // delete event by id
-export const deleteEventByID = async(event_id: number) => {
+export const deleteEventById = async(event_id: number) => {
     const result = await database<Event>("events")
         .where({id: event_id})
         .del();
@@ -124,9 +124,10 @@ export const deleteEventByID = async(event_id: number) => {
 };
 
 // fetchAllEvents
-export const fetchAllEvents = async (user_id: string, params: AllEventsQueryParams) => {
+export const fetchAllEvents = async (user_id: number, params: AllEventsQueryParams) => {
 
-    const { isParticipating, isRequested, isOrganized } = params;
+    // consider side-effects of undefined case for params if any....be cautious not to left any undefined !!!!
+    const { isParticipating, isPublic, isRequested, isOrganized } = params;
     let events: AllEventsResponse[] = [];
     if (isOrganized) {
         // fetch all organized events by the user
@@ -142,7 +143,8 @@ export const fetchAllEvents = async (user_id: string, params: AllEventsQueryPara
             .leftJoin("location_tags", "events.location_id", "location_tags.id")
             // inner join because organizer_id is notNullable
             .join("users", "events.organizer_id", "users.id")
-            .where("events.organizer_id", user_id);
+            .where("events.organizer_id", user_id)
+            .andWhere("events.is_public", isPublic);
     }
     else if (!isParticipating) {
         // fetch all published events
@@ -158,7 +160,7 @@ export const fetchAllEvents = async (user_id: string, params: AllEventsQueryPara
             .leftJoin("location_tags", "events.location_id", "location_tags.id")
             // inner join because organizer_id is notNullable
             .join("users", "events.organizer_id", "users.id")
-            .where("events.is_public", true);
+            .where("events.is_public", isPublic);
     }
     else {
         if (isRequested) {
@@ -178,7 +180,8 @@ export const fetchAllEvents = async (user_id: string, params: AllEventsQueryPara
                 // inner join because organizer_id is notNullable
                 .join("users", "events.organizer_id", "users.id")
                 .where("event_participants.user_id", user_id)
-                .andWhere("event_participants.rsvp", "AWAITING");
+                .andWhere("event_participants.rsvp", "AWAITING")
+                .andWhere("events.is_public", isPublic);
         } else {
             // return participating events
             events = await database("events")
@@ -196,6 +199,7 @@ export const fetchAllEvents = async (user_id: string, params: AllEventsQueryPara
                 // inner join because organizer_id is notNullable
                 .join("users", "events.organizer_id", "users.id")
                 .where("event_participants.user_id", user_id)
+                .andWhere("events.is_public", isPublic)
                 .andWhereNot("event_participants.rsvp", "AWAITING");
         }
     }
@@ -243,9 +247,9 @@ export const fetchEventById = async (id: number, trx?: Knex.Transaction) => {
 
 // handle event tags
 
-// add user_event_tags [used by user && organizer, ===>>> organizer is also user]
+// adds user_event_tags [used by user && organizer, ===>>> organizer is also user]
 // POST: /events/:id/tags
-export const addEventUserTagById = async(data: CreateUserEventTagRequest, params: EventTagsQueryParams) => {
+export const addEventTagById = async(data: CreateUserEventTagRequest) => {
     const { tag_name, event_id, user_id, organizer_id } = data;
 
     // add or update `updated_at` for tag and return all user_event_tags
@@ -271,7 +275,7 @@ export const addEventUserTagById = async(data: CreateUserEventTagRequest, params
 
     });
         // fetch all event_tags
-    return await tagsServices.fetchAllEventTagsById(event_id, user_id, organizer_id, params);
+    return await tagsServices.fetchAllEventTagsById(event_id, user_id, organizer_id, {fetchEventOrganizersTags: user_id === organizer_id});
 }
 
 /*************************************************************************************************/

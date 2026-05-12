@@ -1,9 +1,10 @@
 export interface EventTagsQueryParams {
-    fetchEventTags: boolean; // tags for event set by organizer
+    fetchEventOrganizersTags: boolean; // tags for event set by organizer
 }
 
 export interface AllEventsQueryParams {
-    isParticipating: boolean;
+    isParticipating?: boolean;
+    isPublic?: boolean;
     isRequested?: boolean; // for event requests ---> rsvp === 'AWAITING', requested and not responded yet
     isOrganized?: boolean;
 }

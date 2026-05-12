@@ -65,10 +65,10 @@ export async function up(knex: Knex): Promise<void> {
 
 export async function down(knex: Knex): Promise<void> {
     return knex.schema
-        .dropTableIfExists("user_location_tags")
         .dropTableIfExists("user_event_tags")
         .dropTableIfExists("event_participants")
         .dropTableIfExists("events")
+        .dropTableIfExists("user_location_tags")
         .dropTableIfExists("location_tags")
         .dropTableIfExists("event_tags");
 }
