@@ -22,7 +22,7 @@ export async function up(knex: Knex): Promise<void> {
         .createTable("user_location_tags", (table) => {
             table.increments("id").primary();
             table.integer("user_id").unsigned().references("id").inTable("users").onDelete("CASCADE");
-            // unique tag_id
+            // unique tag_id, ---> multiple events hold same tag_id
             table.integer("tag_id").unsigned().unique().references("id").inTable("location_tags").onDelete("CASCADE");
             table.timestamps(true, true);
         })
@@ -58,6 +58,7 @@ export async function up(knex: Knex): Promise<void> {
             table.increments("id").primary();
             table.integer("user_id").unsigned().references("id").inTable("users").onDelete("CASCADE");
             table.integer("event_id").unsigned().references("id").inTable("events").onDelete("CASCADE");
+            // not unique, multiple events can hold same tags
             table.integer("tag_id").unsigned().references("id").inTable("event_tags").onDelete("CASCADE");
         })
         ;

@@ -1,5 +1,5 @@
 export interface EventTagsQueryParams {
-    fetchEventOrganizersTags: boolean; // tags for event set by organizer
+    fetchEventOrganizersTags?: boolean; // tags for event set by organizer
 }
 
 export interface AllEventsQueryParams {
