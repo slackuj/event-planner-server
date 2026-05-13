@@ -40,6 +40,13 @@ eventRoutes.get(
 );
 
 // Fetch event by event_id
+/**
+ * Fetches an event by ID with authorization checks.
+ * Allows access if:
+ * 1. The event is public.
+ * 2. The user is the organizer.              AUTHORIZATION APPLIED IN SERVICE ---> REDUCES DATABASE OVERHEADS !!!
+ * 3. The user is a participant.
+ */
 eventRoutes.get(
     "/:event_id",
     authenticate,

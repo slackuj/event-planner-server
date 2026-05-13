@@ -28,12 +28,13 @@ export const create = async(
 };
 
 export const updateEventById = async(
-    req: Request,
+    req: AuthRequest,
     res: Response,
     next: NextFunction,
 ) => {
     try{
-        const response = await eventServices.updateEventById(req.body, Number(req.params.event_id));
+        const user_id = req.user!.id;
+        const response = await eventServices.updateEventById(req.body, Number(req.params.event_id), user_id);
         return successResponse(
             res,
             {
@@ -65,12 +66,13 @@ export const updateEventLocationById = async(
 };
 
 export const deleteEventLocationById = async(
-    req: Request,
+    req: AuthRequest,
     res: Response,
     next: NextFunction,
 ) => {
     try{
-        await eventServices.deleteEventLocationById(Number(req.params.event_id));
+        const user_id = req.user!.id;
+        await eventServices.deleteEventLocationById(Number(req.params.event_id), user_id);
         return successResponse(
             res,
             { status: httpCodes.NO_CONTENT.statusCode },
@@ -81,12 +83,13 @@ export const deleteEventLocationById = async(
 };
 
 export const deleteEventById = async(
-    req: Request,
+    req: AuthRequest,
     res: Response,
     next: NextFunction,
 ) => {
     try{
-        await eventServices.deleteEventById(Number(req.params.event_id));
+        const user_id = req.user!.id;
+        await eventServices.deleteEventById(Number(req.params.event_id), user_id);
         return successResponse(
             res,
             { status: httpCodes.NO_CONTENT.statusCode },
@@ -115,12 +118,13 @@ export const fetchAllEvents = async(
 };
 
 export const fetchEventById = async(
-    req: Request,
+    req: AuthRequest,
     res: Response,
     next: NextFunction,
 ) => {
     try{
-        const response = await eventServices.fetchEventById(Number(req.params.event_id));
+        const user_id = req.user!.id;
+        const response = await eventServices.fetchEventById(Number(req.params.event_id), user_id);
         return successResponse(
             res,
             { data: response },
@@ -193,16 +197,24 @@ export const deleteUserEventTag = async(
 };
 
 // /events/:event_id/participation/:user_id
+// eventController.ts
+
+// /events/:event_id/participation/:user_id
 export const upsertEventParticipationById = async(
-    req: Request,
+    req: AuthRequest, // Changed from Request to AuthRequest to access req.user
     res: Response,
     next: NextFunction,
 ) => {
-    try{
-        const user_id = Number(req.params.user_id);
+    try {
+        const requester_id = req.user!.id; // The person making the request
+        const target_user_id = Number(req.params.user_id); // The user being added/updated
         const event_id = Number(req.params.event_id);
-        // handle undefined case
-        const response = await eventServices.upsertEventParticipationById({user_id, event_id, ...req.body});
+
+        const response = await eventServices.upsertEventParticipationById(
+            { user_id: target_user_id, event_id, ...req.body },
+            requester_id
+        );
+
         return successResponse(
             res,
             { data: response },
@@ -251,19 +263,24 @@ export const fetchAllEventParticipationByEventId = async(
     }
 };
 
+// eventController.ts
+
 export const removeEventParticipationById = async(
-    req: Request,
+    req: AuthRequest, // Changed from Request to AuthRequest
     res: Response,
     next: NextFunction,
 ) => {
-    try{
-        const user_id = Number(req.params.user_id);
+    try {
+        const requester_id = req.user!.id; // Authenticated user ID
+        const user_id = Number(req.params.user_id); // ID of the participant to be removed
         const event_id = Number(req.params.event_id);
-        // handle undefined case
-        await eventServices.removeEventParticipationById({user_id, event_id});
+
+        // Pass the requester_id to the service for authorization check
+        await eventServices.removeEventParticipationById({user_id, event_id}, requester_id);
+
         return successResponse(
             res,
-            {status: httpCodes.NO_CONTENT.statusCode },
+            { status: httpCodes.NO_CONTENT.statusCode },
         );
     } catch (error) {
         next(error);

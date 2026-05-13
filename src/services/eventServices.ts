@@ -55,14 +55,16 @@ export const create = async (data: CreateEventData) => {
             throw new Error("Failed creating new event");
         }
 
-        return await fetchEventById(event_id, trx);
+        return await fetchEventById(event_id, undefined, trx);
     });
 };
 
 // updates : title, description, event_date, is_public, updated_at using event_id
-export const updateEventById = async (data: UpdateEventRequest, event_id: number) => {
-    await database<Event>("events").update(data).where({id: event_id});
-    //if (updatedRow === 0) return null;
+export const updateEventById = async (data: UpdateEventRequest, event_id: number, user_id: number) => {
+    const updatedRow = await database<Event>("events").update(data).where({id: event_id, organizer_id: user_id});
+    if (updatedRow === 0) {
+        throw new Error("Failed Updating Event: Inadequate authorization or event does not exists !");
+    }
     return await fetchEventById(event_id);
 };
 
@@ -85,7 +87,10 @@ export const updateEventLocationById = async (data: UpdateEventLocationRequest, 
             const location_id = await tagsServices.fetchLocationTagId(slug, trx);
 
             // upsert user_location_tag
-            /// this at least updates `updated_at` field, such that we get to fetch recent tags !!!
+            // this at least updates `updated_at` field, such that we get to fetch recent tags !!!
+        /***********************************************************************************************
+            DATABASE TRANSACTION + USE OF ORGANIZER ID GUARANTEES THE UPDATE IS BEING DONE BY ORGANIZER
+        /***********************************************************************************************/
             const [upsertResult2] = await tagsServices.upsertUserLocationTag({user_id: organizer_id, tag_id: location_id}, trx);
             if (!upsertResult2) { // i.e if upsertResult2 === 0
                 logger.error(`[EVENT-SERVICES] [CREATE-EVENT] failed upserting user_location_tag`);
@@ -95,7 +100,7 @@ export const updateEventLocationById = async (data: UpdateEventLocationRequest, 
         // Update the Event Location
         await database<Event>("events").update({location_id}).where({id: event_id});
         //if (updatedRow === 0) return null;
-        return await fetchEventById(event_id, trx);
+        return await fetchEventById(event_id, undefined, trx);
     });
 };
 
@@ -104,23 +109,25 @@ export const updateEventLocationById = async (data: UpdateEventLocationRequest, 
 // DONOT DELETE LOCATION TAG FROM user_location_tags TABLE
 // BECAUSE MULTIPLE EVENTS CAN HAVE SAME LOCATION !!!
 // ONLY UPDATE location_id to be null !!! IN events TABLE !! !! !!
-export const deleteEventLocationById = async(event_id: number) => {
+export const deleteEventLocationById = async(event_id: number, organizer_id: number) => {
     const event = await database<Event>("events")
-        .where({id: event_id})
+        .where({id: event_id, organizer_id: organizer_id})
         .update("location_id", null);
 
-    if (!event) {
-        throw new Error("Event does not exists!");
+    if (event === 0) {
+        throw new Error("Failed Deleting Event Location: Inadequate authorization or event does not exists!");
     }
 };
 
 // delete event by id
-export const deleteEventById = async(event_id: number) => {
+export const deleteEventById = async(event_id: number, user_id: number) => {
     const result = await database<Event>("events")
-        .where({id: event_id})
+        .where({id: event_id, organizer_id: user_id})
         .del();
 
-    if (result === 0) return "nothing to delete";
+    if (result === 0) {
+        throw new Error("Failed Deleting Event: Inadequate Authorization or Event does not exists!");
+    }
 };
 
 // fetchAllEvents
@@ -213,12 +220,19 @@ export const fetchAllEvents = async (user_id: number, params: AllEventsQueryPara
     return events;
 };
 
-// is it required to fetch inside transaction ? HANDLE LATER
-export const fetchEventById = async (id: number, trx?: Knex.Transaction) => {
-    // Use the passed trx if it exists, otherwise fall back to the main database instance
+// eventServices.ts
+
+/**
+ * Fetches an event by ID with authorization checks.
+ * Allows access if:
+ * 1. The event is public.
+ * 2. The user is the organizer.
+ * 3. The user is a participant.
+ */
+export const fetchEventById = async (id: number, user_id?: number, trx?: Knex.Transaction) => {
     const queryBuilder = trx ? trx("events") : database("events");
 
-    const event = await queryBuilder
+    const query = queryBuilder
         .select<EventWithLocationAndOrganizer>(
             "events.id",
             "events.title",
@@ -230,22 +244,34 @@ export const fetchEventById = async (id: number, trx?: Knex.Transaction) => {
             "users.email as organizer_email",
             "users.profile_picture as organizer_profile_picture"
         )
-        // leftJoin because location_id is nullable in your migration
         .leftJoin("location_tags", "events.location_id", "location_tags.id")
-        // inner join because organizer_id is notNullable
         .join("users", "events.organizer_id", "users.id")
-        .where("events.id", id)
-        .first();
+        .where("events.id", id);
+
+    // Apply authorization filter only if user_id is provided (API calls)
+    // Internal calls (like after creation) pass undefined to bypass this check
+    if (user_id) {
+        query.andWhere(function() {
+            this.where("events.is_public", true)
+                .orWhere("events.organizer_id", user_id)
+                .orWhereExists(function() {
+                    this.select("*")
+                        .from("event_participants")
+                        .whereRaw("event_participants.event_id = events.id")
+                        .andWhere("event_participants.user_id", user_id);
+                });
+        });
+    }
+
+    const event = await query.first();
 
     if (!event) {
-        throw new Error("Failed to retrieve event.");
+        // Generic message for security (don't reveal if ID exists but is private)
+        throw new Error("Event not found or access denied.");
     }
 
     return event;
 };
-
-
-
 
 /*************************************************************************************************/
 /************************* SERVICES FOR EVENT PARTICIPANTS ***************************************/
@@ -253,9 +279,46 @@ export const fetchEventById = async (id: number, trx?: Knex.Transaction) => {
 
 // upsert event participation by user_id
 // /events/:id/participation/:userId ---> id  = event_id
-export const upsertEventParticipationById = async(data: Omit<EventParticipant, 'id'>) => {
+// eventServices.ts
+
+export const upsertEventParticipationById = async(
+    data: Omit<EventParticipant, 'id'>,
+    requester_id: number // Added requester_id for authorization
+) => {
+    const { event_id } = data;
+
+    // 1. Fetch event details to check if it's public or who the organizer is
+    const event = await database("events")
+        .select<Pick<Event, 'is_public' | 'organizer_id'>>("is_public", "organizer_id")
+        .where("id", event_id)
+        .first();
+
+    if (!event) {
+        throw new Error("Event not found.");
+    }
+
+    // 2. Check if the requester is already a participant
+    const existingParticipation = await database<EventParticipant>("event_participants")
+        .where({ event_id, user_id: requester_id })
+        .first();
+
+    // 3. Authorization Logic:
+    // Allow if: Event is public OR requester is organizer OR requester is already a participant
+    const isPublic = event.is_public;
+    const isOrganizer = event.organizer_id === requester_id;
+    const isParticipant = !!existingParticipation;
+
+    if (!isPublic && !isOrganizer && !isParticipant) {
+        throw new Error("Access denied. You do not have permission to modify participation for this private event.");
+    }
+
+    // 4. Proceed with upsert if authorized
     await database<EventParticipant>("event_participants").upsert(data);
-    return await fetchEventParticipationById({user_id: data.user_id, event_id: data.event_id});
+
+    return await fetchEventParticipationById({
+        user_id: data.user_id,
+        event_id: data.event_id
+    });
 };
 
 export const fetchEventParticipationById = async(data: Omit<EventParticipant, 'id' | 'rsvp'>) => {
@@ -291,9 +354,37 @@ export const fetchAllEventParticipationByEventId = async(event_id: number) => {
         .where("event_participants.event_id", event_id);
 };
 
-export const removeEventParticipationById = async(data: Omit<EventParticipant, 'id' | 'rsvp'>) => {
-    await database<EventParticipant>("event_participants").where(data).del();
-    //if (result === 0) return "nothing to delete";
+// eventServices.ts
+
+export const removeEventParticipationById = async(
+    data: Omit<EventParticipant, 'id' | 'rsvp'>,
+    requester_id: number // Added requester_id parameter
+) => {
+    const { event_id, user_id } = data;
+
+    // 1. Fetch the event to identify the organizer
+    const event = await database("events")
+        .select("organizer_id")
+        .where("id", event_id)
+        .first();
+
+    if (!event) {
+        throw new Error("Event not found.");
+    }
+
+    // 2. Authorization: Check if the requester is the organizer
+    if (event.organizer_id !== requester_id) {
+        throw new Error("Access denied. Only the organizer is allowed to remove participants.");
+    }
+
+    // 3. Proceed with removal
+    const result = await database<EventParticipant>("event_participants")
+        .where({ event_id, user_id })
+        .del();
+
+    if (result === 0) {
+        logger.warn(`[EVENT-SERVICES] No participation record found for user ${user_id} in event ${event_id}`);
+    }
 };
 
 /*************************************************************************************************/
@@ -304,6 +395,17 @@ export const removeEventParticipationById = async(data: Omit<EventParticipant, '
 // POST: /events/:id/tags ---> id === event_id
 export const addEventTagById = async(data: CreateUserEventTagRequest) => {
     const { tag_name, event_id, user_id, organizer_id } = data;
+
+// Authorization Check
+    const isOrganizer = user_id === organizer_id;
+
+    const isParticipant = await database<EventParticipant>("event_participants")
+        .where({ event_id, user_id })
+        .first();
+
+    if (!isOrganizer && !isParticipant) {
+        throw new Error("Access denied. Only organizers or participants can add tags to event.");
+    }
 
     // add or update `updated_at` for tag and return all user_event_tags
     await database.transaction(async (trx) => {
@@ -332,6 +434,18 @@ export const addEventTagById = async(data: CreateUserEventTagRequest) => {
 }
 
 export const fetchAllEventTagsById = async(event_id: number, user_id: number, organizer_id: number, params: EventTagsQueryParams) => {
+
+    // Authorization Check
+    const isOrganizer = user_id === organizer_id;
+
+    const isParticipant = await database<EventParticipant>("event_participants")
+        .where({ event_id, user_id })
+        .first();
+
+    if (!isOrganizer && !isParticipant) {
+        throw new Error("Access denied. Only organizers or participants can fetch event tags.");
+    }
+
     const { fetchEventOrganizersTags } = params;
     let User_Id: number;
     if (fetchEventOrganizersTags) User_Id = organizer_id;
