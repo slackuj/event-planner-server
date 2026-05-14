@@ -122,6 +122,9 @@ eventRoutes.delete(
 
 // Upsert participation (The route pattern you requested)
 // /events/:event_id/participation/:user_id
+
+// WHICH METHOD TO USE FOR UPSERT OPERATION ???????????????????????
+
 eventRoutes.post(
     "/:event_id/participation/:user_id",
     authenticate,

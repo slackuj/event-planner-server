@@ -110,7 +110,10 @@ export const fetchAllEvents = async(
         const response = await eventServices.fetchAllEvents(user_id, params);
         return successResponse(
             res,
-            { data: response },
+            {
+                data: response.events,
+                meta: response.metadata,
+            },
         );
     } catch (error) {
         next(error);

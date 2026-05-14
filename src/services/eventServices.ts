@@ -131,93 +131,81 @@ export const deleteEventById = async(event_id: number, user_id: number) => {
 };
 
 // fetchAllEvents
+// fetchAllEvents
 export const fetchAllEvents = async (user_id: number, params: AllEventsQueryParams) => {
 
-    // consider side-effects of undefined case for params if any....be cautious not to left any undefined !!!!
-    const { isParticipating, isPublic, isRequested, isOrganized } = params;
-    let events: AllEventsResponse[] = [];
+    const { isParticipating, isPublic, isRequested, isOrganized, page = 1 } = params;
+
+    const limit = 4;
+    const offset = (page - 1) * limit;
+
+
+    // 2. Initialize the Base Query
+    // We start with a base query to reuse the same logic for both data and counting
+    const query = database("events");
+
     if (isOrganized) {
-        // fetch all organized events by the user
-        events = await database("events")
-            .select<AllEventsResponse[]>(
-                "events.id",
-                "events.title",
-                "events.event_date",
-                "users.email as organizer_email",
-                "users.profile_picture as organizer_profile_picture"
-            )
-            // leftJoin because location_id is nullable in your migration
+        query
             .leftJoin("location_tags", "events.location_id", "location_tags.id")
-            // inner join because organizer_id is notNullable
             .join("users", "events.organizer_id", "users.id")
             .where("events.organizer_id", user_id)
             .andWhere("events.is_public", isPublic);
     }
     else if (!isParticipating) {
-        // fetch all published events
-        events = await database("events")
+        query
+            .leftJoin("location_tags", "events.location_id", "location_tags.id")
+            .join("users", "events.organizer_id", "users.id")
+            .where("events.is_public", isPublic);
+    }
+    else {
+        query.join("event_participants", "events.id", "event_participants.event_id")
+            .leftJoin("location_tags", "events.location_id", "location_tags.id")
+            .join("users", "events.organizer_id", "users.id")
+            .where("event_participants.user_id", user_id)
+            .andWhere("events.is_public", isPublic);
+
+        if (isRequested) {
+            query.andWhere("event_participants.rsvp", "AWAITING");
+        } else {
+            query.andWhereNot("event_participants.rsvp", "AWAITING");
+        }
+    }
+
+    // 3. Execute count and data fetch in parallel
+    const [totalResult, events] = await Promise.all([
+        query.clone().count("events.id as total").first(),
+        query.clone()
             .select<AllEventsResponse[]>(
                 "events.id",
                 "events.title",
                 "events.event_date",
                 "users.email as organizer_email",
-                "users.profile_picture as organizer_profile_picture"
+                "users.profile_picture as organizer_profile_picture",
+                // Include rsvp if it's a participation query
+                isParticipating ? "event_participants.rsvp" : database.raw('NULL as rsvp')
             )
-            // leftJoin because location_id is nullable in your migration
-            .leftJoin("location_tags", "events.location_id", "location_tags.id")
-            // inner join because organizer_id is notNullable
-            .join("users", "events.organizer_id", "users.id")
-            .where("events.is_public", isPublic);
-    }
-    else {
-        if (isRequested) {
-            // return requested events
-            events = await database("events")
-                .select<AllEventsResponse[]>(
-                    "events.id",
-                    "events.title",
-                    "events.event_date",
-                    "users.email as organizer_email",
-                    "users.profile_picture as organizer_profile_picture",
-                    "event_participants.rsvp"
-                )
-                .join("event_participants", "events.id", "event_participants.event_id")
-                // leftJoin because location_id is nullable in your migration
-                .leftJoin("location_tags", "events.location_id", "location_tags.id")
-                // inner join because organizer_id is notNullable
-                .join("users", "events.organizer_id", "users.id")
-                .where("event_participants.user_id", user_id)
-                .andWhere("event_participants.rsvp", "AWAITING")
-                .andWhere("events.is_public", isPublic);
-        } else {
-            // return participating events
-            events = await database("events")
-                .select<AllEventsResponse[]>(
-                    "events.id",
-                    "events.title",
-                    "events.event_date",
-                    "users.email as organizer_email",
-                    "users.profile_picture as organizer_profile_picture",
-                    "event_participants.rsvp"
-                )
-                .join("event_participants", "events.id", "event_participants.event_id")
-                // leftJoin because location_id is nullable in your migration
-                .leftJoin("location_tags", "events.location_id", "location_tags.id")
-                // inner join because organizer_id is notNullable
-                .join("users", "events.organizer_id", "users.id")
-                .where("event_participants.user_id", user_id)
-                .andWhere("events.is_public", isPublic)
-                .andWhereNot("event_participants.rsvp", "AWAITING");
-        }
-    }
+            .limit(limit)
+            .offset(offset)
+            .orderBy("events.event_date", "desc") // Good practice to order when paginating
+    ]);
 
-
-    // handle error
     if (!events) {
         throw new Error("Failed to retrieve events.");
     }
 
-    return events;
+    const totalEvents = parseInt(totalResult?.total as string) || 0;
+    const totalPages = Math.ceil(totalEvents / limit);
+
+    // 4. Return Data with Metadata
+    return {
+        events,
+        metadata: {
+            totalEvents,
+            totalPages,
+            page,
+            limit
+        }
+    };
 };
 
 // eventServices.ts
