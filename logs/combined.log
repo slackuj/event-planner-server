@@ -1,0 +1,89 @@
+2026-05-14 13:39:57 [info]: 
+Server started on port 17190
+
+2026-05-14 13:39:57 [info]: Database connection established successfully.
+2026-05-14 13:40:52 [error]: [AUTH-SERVICES] [REFRESH] Invalid refresh token signature
+2026-05-14 13:40:52 [http]: ::1 - - [14/May/2026:07:55:52 +0000] "POST /api/auth/refresh HTTP/1.1" 500 119 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 13:40:52 [error]: [AUTH-SERVICES] [REFRESH] Invalid refresh token signature
+2026-05-14 13:40:52 [http]: ::1 - - [14/May/2026:07:55:52 +0000] "POST /api/auth/refresh HTTP/1.1" 500 119 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 13:46:48 [info]: [MAIL-SERVICES] [ACCOUNT CONFIRMATION] user: joshibirendra36@gmail.com, subject: OpenCourse Academy Confirmation Instructions
+2026-05-14 13:46:48 [info]: [AUTH-SERVICES] [REGISTER] User created (unconfirmed): joshibirendra36@gmail.com
+2026-05-14 13:46:48 [http]: ::1 - - [14/May/2026:08:01:48 +0000] "POST /api/auth/register HTTP/1.1" 201 154 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 13:47:31 [info]: [AUTH-SERVICES] [CONFIRMATION] Account confirmed successfully: joshibirendra36@gmail.com
+2026-05-14 13:47:31 [http]: ::1 - - [14/May/2026:08:02:31 +0000] "POST /api/auth/confirm HTTP/1.1" 200 55 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 13:47:44 [info]: [SESSION-SERVICES] [CREATE] session created: user: 1
+2026-05-14 13:47:44 [info]: [AUTH-SERVICES] [LOGIN] User logged in: joshibirendra36@gmail.com
+2026-05-14 13:47:44 [http]: ::1 - - [14/May/2026:08:02:44 +0000] "POST /api/auth/login HTTP/1.1" 200 626 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 13:47:44 [http]: ::1 - - [14/May/2026:08:02:44 +0000] "GET /api/users/me HTTP/1.1" 500 185 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 13:53:22 [info]: 
+Server started on port 17190
+
+2026-05-14 13:53:22 [info]: Database connection established successfully.
+2026-05-14 13:53:37 [http]: ::1 - - [14/May/2026:08:08:37 +0000] "GET /api/users/me HTTP/1.1" 200 179 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 13:53:43 [http]: ::1 - - [14/May/2026:08:08:43 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 13:54:09 [info]: [SESSION-SERVICES] [DELETE BY TOKEN] user sessions deleted
+2026-05-14 13:54:09 [http]: ::1 - - [14/May/2026:08:09:09 +0000] "POST /api/auth/logout HTTP/1.1" 204 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 18:30:16 [info]: 
+Server started on port 17190
+
+2026-05-14 18:30:16 [info]: Database connection established successfully.
+2026-05-14 18:30:29 [info]: [SESSION-SERVICES] [CREATE] session created: user: 1
+2026-05-14 18:30:29 [info]: [AUTH-SERVICES] [LOGIN] User logged in: joshibirendra36@gmail.com
+2026-05-14 18:30:29 [http]: ::1 - - [14/May/2026:12:45:29 +0000] "POST /api/auth/login HTTP/1.1" 200 612 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 18:30:29 [http]: ::1 - - [14/May/2026:12:45:29 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 18:31:12 [http]: ::1 - - [14/May/2026:12:46:12 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 18:33:05 [http]: ::1 - - [14/May/2026:12:48:05 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 18:39:43 [http]: ::1 - - [14/May/2026:12:54:43 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:03:09 [info]: 
+Server started on port 17190
+
+2026-05-14 20:03:09 [info]: Database connection established successfully.
+2026-05-14 20:04:31 [info]: [SESSION-SERVICES] [CREATE] session created: user: 1
+2026-05-14 20:04:31 [info]: [SESSION-SERVICES] [CREATE] session created: user: 1
+2026-05-14 20:04:31 [info]: [SESSION-SERVICES] [DELETE BY TOKEN] user sessions deleted
+2026-05-14 20:04:31 [info]: [AUTH-SERVICES] [REFRESH] Access token rotated for user: joshibirendra36@gmail.com
+2026-05-14 20:04:31 [http]: ::1 - - [14/May/2026:14:19:31 +0000] "POST /api/auth/refresh HTTP/1.1" 200 254 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:04:31 [info]: [SESSION-SERVICES] [DELETE BY TOKEN] user sessions deleted
+2026-05-14 20:04:31 [info]: [AUTH-SERVICES] [REFRESH] Access token rotated for user: joshibirendra36@gmail.com
+2026-05-14 20:04:31 [http]: ::1 - - [14/May/2026:14:19:31 +0000] "POST /api/auth/refresh HTTP/1.1" 200 254 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:04:31 [http]: ::1 - - [14/May/2026:14:19:31 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:05:59 [http]: ::1 - - [14/May/2026:14:20:59 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:06:38 [http]: ::1 - - [14/May/2026:14:21:38 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:08:25 [http]: ::1 - - [14/May/2026:14:23:25 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:12:25 [http]: ::1 - - [14/May/2026:14:27:25 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:12:46 [http]: ::1 - - [14/May/2026:14:27:46 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:15:08 [http]: ::1 - - [14/May/2026:14:30:08 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:16:35 [http]: ::1 - - [14/May/2026:14:31:35 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:18:24 [http]: ::1 - - [14/May/2026:14:33:24 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:20:04 [http]: ::1 - - [14/May/2026:14:35:04 +0000] "GET /api/users/me HTTP/1.1" 401 122 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:20:04 [warn]: [AUTH-SERVICES] [REFRESH] Session not found or revoked
+2026-05-14 20:20:04 [http]: ::1 - - [14/May/2026:14:35:04 +0000] "POST /api/auth/refresh HTTP/1.1" 500 124 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:20:27 [info]: [SESSION-SERVICES] [CREATE] session created: user: 1
+2026-05-14 20:20:27 [info]: [AUTH-SERVICES] [LOGIN] User logged in: joshibirendra36@gmail.com
+2026-05-14 20:20:27 [http]: ::1 - - [14/May/2026:14:35:27 +0000] "POST /api/auth/login HTTP/1.1" 200 612 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:21:24 [http]: ::1 - - [14/May/2026:14:36:24 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:25:41 [http]: ::1 - - [14/May/2026:14:40:41 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:28:21 [info]: [SESSION-SERVICES] [CREATE] session created: user: 1
+2026-05-14 20:28:21 [info]: [SESSION-SERVICES] [CREATE] session created: user: 1
+2026-05-14 20:28:21 [info]: [SESSION-SERVICES] [DELETE BY TOKEN] user sessions deleted
+2026-05-14 20:28:21 [info]: [AUTH-SERVICES] [REFRESH] Access token rotated for user: joshibirendra36@gmail.com
+2026-05-14 20:28:21 [http]: ::1 - - [14/May/2026:14:43:21 +0000] "POST /api/auth/refresh HTTP/1.1" 200 254 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:28:21 [info]: [SESSION-SERVICES] [DELETE BY TOKEN] user sessions deleted
+2026-05-14 20:28:21 [info]: [AUTH-SERVICES] [REFRESH] Access token rotated for user: joshibirendra36@gmail.com
+2026-05-14 20:28:21 [http]: ::1 - - [14/May/2026:14:43:21 +0000] "POST /api/auth/refresh HTTP/1.1" 200 254 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:28:21 [http]: ::1 - - [14/May/2026:14:43:21 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:30:30 [http]: ::1 - - [14/May/2026:14:45:30 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:36:38 [http]: ::1 - - [14/May/2026:14:51:38 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:54:59 [http]: ::1 - - [14/May/2026:15:09:59 +0000] "GET /api/users/me HTTP/1.1" 401 122 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:54:59 [warn]: [AUTH-SERVICES] [REFRESH] Session not found or revoked
+2026-05-14 20:54:59 [http]: ::1 - - [14/May/2026:15:09:59 +0000] "POST /api/auth/refresh HTTP/1.1" 500 124 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 20:56:11 [info]: [SESSION-SERVICES] [CREATE] session created: user: 1
+2026-05-14 20:56:11 [info]: [AUTH-SERVICES] [LOGIN] User logged in: joshibirendra36@gmail.com
+2026-05-14 20:56:11 [http]: ::1 - - [14/May/2026:15:11:11 +0000] "POST /api/auth/login HTTP/1.1" 200 612 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 21:02:33 [http]: ::1 - - [14/May/2026:15:17:33 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 21:33:12 [http]: ::1 - - [14/May/2026:15:48:12 +0000] "GET /api/users/me HTTP/1.1" 401 122 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 21:33:12 [info]: [SESSION-SERVICES] [CREATE] session created: user: 1
+2026-05-14 21:33:12 [info]: [SESSION-SERVICES] [DELETE BY TOKEN] user sessions deleted
+2026-05-14 21:33:12 [info]: [AUTH-SERVICES] [REFRESH] Access token rotated for user: joshibirendra36@gmail.com
+2026-05-14 21:33:12 [http]: ::1 - - [14/May/2026:15:48:12 +0000] "POST /api/auth/refresh HTTP/1.1" 200 254 "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"
+2026-05-14 21:33:12 [http]: ::1 - - [14/May/2026:15:48:12 +0000] "GET /api/users/me HTTP/1.1" 304 - "http://localhost:5173/" "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"

@@ -1,4 +1,4 @@
-import {config} from "./src/config";
+import {config} from "./config";
 const knexConfig = {
     development: {
         client: "mysql2",
@@ -10,7 +10,7 @@ const knexConfig = {
         },
         migrations: {
             // Ensure this directory exists or Knex can create it
-            directory: "./src/database/migrations",
+            directory: "./database/migrations",
             extension: "ts",
         },
     },

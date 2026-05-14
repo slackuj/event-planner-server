@@ -9,7 +9,7 @@ export const getMe = async (
     next: NextFunction
 ) => {
     try {
-        const user_id = Number(req.params.user_id);
+        const user_id = req.user!.id;
         const user = await userServices.fetchUserById(user_id);
 
         return successResponse(res, { data: user });

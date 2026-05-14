@@ -203,7 +203,7 @@ export const login = async (data: UserLoginRequest) => {
     logger.info(`[AUTH-SERVICES] [LOGIN] User logged in: ${email}`);
 
     // Return tokens and user info (excluding password)
-    const { password: _, ...rest } = user;
+    const { password: _, role, ...rest } = user;
     return {
         accessToken,
         refreshToken,

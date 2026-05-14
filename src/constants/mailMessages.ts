@@ -1,6 +1,6 @@
 export const mailMessages = {
     CONFIRM_NEW_ACCOUNT: {
-        subject: "OpenCourse Academy Confirmation Instructions",
+        subject: "Event Planner Confirmation Instructions",
         text: (otp: string) =>
             `Confirm your account\n\nPlease return to your browser window and enter this 6-digit code to confirm your account: ${otp}\n\nIf you did not make this change, please disregard this email.`,
         html: (otp: string) => `

@@ -8,8 +8,8 @@
     "build": "tsc --build",
     "start": "npm run build && node dist/index.js",
     "docker:up": "docker-compose up -d",
-    "migrate:latest": "knex migrate:latest",
-    "migrate:rollback": "knex migrate:rollback --all"
+    "migrate:latest": "knex migrate:latest --knexfile src/knexfile.ts",
+    "migrate:rollback": "knex migrate:rollback --all --knexfile src/knexfile.ts"
   },
   "keywords": [],
   "author": "",

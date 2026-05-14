@@ -15,7 +15,7 @@ export const fetchUserById = async (user_id: number) => {
         throw new Error("User not found");
     }
 
-    const { password, ...User } = user;
+    const { password, role, updated_at, ...User } = user;
     return User;
 };
 
