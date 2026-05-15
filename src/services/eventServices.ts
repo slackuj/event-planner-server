@@ -446,12 +446,15 @@ export const fetchAllEventTagsById = async(event_id: number, user_id: number, or
         .join("user_event_tags", "event_tags.id", "user_event_tags.tag_id")
         .where("user_event_tags.user_id", User_Id)
         .andWhere("user_event_tags.event_id", event_id)
-        .select<EventTagResponse[]>("event_tags.name");
+        .select<EventTagResponse[]>(
+            "event_tags.name as name",
+            "user_event_tags.id as id",
+            "user_event_tags.event_id",
+        );
 };
 
 // delete user_event_tag : tage === tag_name
-export const deleteUserEventTag = async(user_id: number, event_id: number, tag: string) => {
-    const tag_id = await tagsServices.fetchEventTagId(tag);
+export const deleteUserEventTag = async(user_id: number, event_id: number, tag_id: number) => {
     await database<UserEventTag>("user_event_tags")
         .where({user_id, tag_id, event_id})
         .del();

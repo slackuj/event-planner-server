@@ -15,7 +15,7 @@ export interface EventWithLocationAndOrganizer {
     id: number;
     title: string;
     description: string;
-    event_date: Date;
+    event_date: number; // timestamp
     location_name: string | null;
     organizer_email: string;
     organizer_profile_picture: string;
@@ -25,7 +25,7 @@ export interface EventWithLocationAndOrganizer {
 export interface AllEventsResponse {
     id: number;
     title: string;
-    event_date: Date;
+    event_date: number; // timestamp
     organizer_email: string;
     organizer_profile_picture: string;
     rsvp?: RSVP;
@@ -84,7 +84,11 @@ export interface EventTag {
     updated_at?: Date;
 }
 
-export type EventTagResponse = Omit<EventTag, 'id' | 'updated_at' | 'slug'>;
+export interface EventTagResponse {
+    id: number; // user_event_tags.id
+    event_id: number;
+    name: string; // tag_name
+}
 
 export interface UserEventTag{
     id: number;

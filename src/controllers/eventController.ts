@@ -179,7 +179,7 @@ export const fetchAllEventTagsById = async(
     }
 };
 
-// DELETE: /events/:event_id/tags
+// DELETE: /events/:event_id/tags/:tag_id
 export const deleteUserEventTag = async(
     req: AuthRequest,
     res: Response,
@@ -188,8 +188,8 @@ export const deleteUserEventTag = async(
     try{
         const user_id = req.user!.id;
         const event_id = Number(req.params.event_id);
-        const {tag} = req.body;
-        const response = await eventServices.deleteUserEventTag(user_id, event_id, tag);
+        const tag_id = Number(req.params.tag_id);
+        const response = await eventServices.deleteUserEventTag(user_id, event_id, tag_id);
         return successResponse(
             res,
             { data: response },

@@ -110,7 +110,7 @@ eventRoutes.get(
 );
 
 eventRoutes.delete(
-    "/:event_id/tags",
+    "/:event_id/tags/:tag_id",
     authenticate,
     validateParams(EventIdParamsSchema),
     validateRequestBody(DeleteEventTagRequestSchema),// update later to appropriate schema
