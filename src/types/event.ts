@@ -87,6 +87,7 @@ export interface EventTag {
 export interface EventTagResponse {
     id: number; // user_event_tags.id
     event_id: number;
+    user_id: number; // to distinguish organizers/users tag !!!
     name: string; // tag_name
 }
 

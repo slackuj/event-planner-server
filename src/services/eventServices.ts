@@ -450,6 +450,7 @@ export const fetchAllEventTagsById = async(event_id: number, user_id: number, or
             "event_tags.name as name",
             "user_event_tags.id as id",
             "user_event_tags.event_id",
+            "user_event_tags.user_id",
         );
 };
 
