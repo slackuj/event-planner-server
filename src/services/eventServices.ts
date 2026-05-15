@@ -416,8 +416,18 @@ export const addEventTagById = async(data: CreateUserEventTagRequest) => {
         }
 
     });
-    // fetch all event_tags
-    return await fetchAllEventTagsById(event_id, user_id, organizer_id, {fetchEventOrganizersTags: user_id === organizer_id});
+    // return event_tag
+    return database("event_tags")
+        //.join("user_event_tags", "event_tags.id", "=", "user_event_tags.tag_id")
+        .join("user_event_tags", "event_tags.id", "user_event_tags.tag_id")
+        .where("user_event_tags.user_id", user_id)
+        .andWhere("user_event_tags.event_id", event_id)
+        .select<EventTagResponse>(
+            "event_tags.name as name",
+            "user_event_tags.id as id",
+            "user_event_tags.event_id",
+            "user_event_tags.user_id",
+        );
 }
 
 export const fetchAllEventTagsById = async(event_id: number, user_id: number, organizer_id: number, params: EventTagsQueryParams) => {
