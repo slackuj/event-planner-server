@@ -3,7 +3,7 @@ import {
     CreateEventData,
     CreateUserEventTagRequest,
     Event,
-    EventParticipant, EventParticipantResponse, EventTagResponse,
+    EventParticipant, EventParticipationResponse, EventTagResponse,
     EventWithLocationAndOrganizer,
     UpdateEventLocationRequest,
     UpdateEventRequest, UserEventTag
@@ -13,7 +13,7 @@ import slugify from "slugify";
 import * as tagsServices from "./tagsServices";
 import {Knex} from "knex";
 import {logger} from "../utils/logger";
-import {AllEventsQueryParams, EventTagsQueryParams} from "../types/QueryParams";
+import {AllEventsQueryParams, EventTagsQueryParams, ParticipantsQueryParams} from "../types/QueryParams";
 
 export const create = async (data: CreateEventData) => {
     const { title, description, event_date, organizer_id, is_public } = data;
@@ -186,7 +186,7 @@ export const fetchAllEvents = async (user_id: number, params: AllEventsQueryPara
             )
             .limit(limit)
             .offset(offset)
-            .orderBy("events.event_date", "desc") // Good practice to order when paginating
+            .orderBy("events.event_date", "desc")
     ]);
 
     if (!events) {
@@ -311,7 +311,7 @@ export const upsertEventParticipationById = async(
 export const fetchEventParticipationById = async(data: Omit<EventParticipant, 'id' | 'rsvp'>) => {
     const eventParticipation =  database("event_participants")
         .join("users", "users.id", "event_participants.user_id")
-        .select<EventParticipantResponse>(
+        .select<EventParticipationResponse>(
             "event_participants.*",
             "users.email as user_email",
             "users.profile_picture as user_profile_picture"
@@ -330,28 +330,60 @@ export const fetchEventParticipationById = async(data: Omit<EventParticipant, 'i
     return eventParticipation;
 };
 
-export const fetchAllEventParticipationByEventId = async(event_id: number) => {
-    return database<EventParticipant>("event_participants")
+export const fetchAllEventParticipationByEventId = async(event_id: number, params: ParticipantsQueryParams) => {
+
+    const { page = 1 } = params;
+    const limit = 4;
+    const offset = (page - 1) * limit;
+
+    // Base Query
+    const query = database<EventParticipant>("event_participants")
         .join("users", "users.id", "event_participants.user_id")
-        .select<EventParticipantResponse[]>(
-            "event_participants.*",
-            "users.email as user_email",
-            "users.profile_picture as user_profile_picture"
-        )
         .where("event_participants.event_id", event_id);
+
+    // Execute count and data fetch in parallel
+    const [totalResult, participants] = await Promise.all([
+        query.clone().count("event_participants.user_id as total").first(),
+        query.clone()
+            .select<EventParticipationResponse[]>(
+                "event_participants.*",
+                "users.email as user_email",
+                "users.profile_picture as user_profile_picture"
+            )
+            .limit(limit)
+            .offset(offset)
+            .orderBy("users.email", "asc")
+    ]);
+
+    if (!participants) {
+        throw new Error("Failed to retrieve participants.");
+    }
+
+    const totalParticipants = parseInt(totalResult?.total as string) || 0;
+    const totalPages = Math.ceil(totalParticipants / limit);
+
+    return {
+        participants,
+        metadata: {
+            totalParticipants,
+            totalPages,
+            page,
+            limit
+        }
+    };
 };
 
 // eventServices.ts
 
 export const removeEventParticipationById = async(
     data: Omit<EventParticipant, 'id' | 'rsvp'>,
-    requester_id: number // Added requester_id parameter
+    requester_id: number
 ) => {
     const { event_id, user_id } = data;
 
-    // 1. Fetch the event to identify the organizer
+    // Fetch the event to identify the organizer
     const event = await database("events")
-        .select("organizer_id")
+        .select<Pick<Event, 'organizer_id'>>("events.organizer_id")
         .where("id", event_id)
         .first();
 
@@ -359,14 +391,19 @@ export const removeEventParticipationById = async(
         throw new Error("Event not found.");
     }
 
-    // 2. Authorization: Check if the requester is the organizer
+    // Authorization: Check if the requester is the organizer
     if (event.organizer_id !== requester_id) {
         throw new Error("Access denied. Only the organizer is allowed to remove participants.");
     }
 
-    // 3. Proceed with removal
+    // Proceed with removal
     const result = await database<EventParticipant>("event_participants")
         .where({ event_id, user_id })
+        .del();
+
+    // cleanup user_event_tags for the id if any
+    await database("user_event_tags")
+        .where({event_id, user_id})
         .del();
 
     if (result === 0) {

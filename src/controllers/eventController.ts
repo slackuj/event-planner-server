@@ -4,7 +4,7 @@ import {successResponse} from "../utils/responseHelper";
 import {httpCodes} from "../constants/httpCodes";
 import {AuthRequest} from "../types/request";
 import {CreateEventData, CreateUserEventTagRequest} from "../types/event";
-import {AllEventsQueryParams, EventTagsQueryParams} from "../types/QueryParams";
+import {AllEventsQueryParams, EventTagsQueryParams, ParticipantsQueryParams} from "../types/QueryParams";
 
 export const create = async(
     req: AuthRequest,
@@ -256,10 +256,14 @@ export const fetchAllEventParticipationByEventId = async(
     try{
         const {event_id} = req.body;
         // handle undefined case
-        const response = await eventServices.fetchAllEventParticipationByEventId(Number(event_id));
+        const params = req.query as ParticipantsQueryParams;
+        const response = await eventServices.fetchAllEventParticipationByEventId(Number(event_id), params);
         return successResponse(
             res,
-            { data: response },
+            {
+                data: response.participants,
+                meta: response.metadata,
+            },
         );
     } catch (error) {
         next(error);

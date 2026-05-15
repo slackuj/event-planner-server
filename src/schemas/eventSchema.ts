@@ -76,6 +76,7 @@ export const OrganizerIdParamsSchema = z.object({
  * Schema for filtering events via query parameters
  */
 export const AllEventsQueryParamsSchema = z.object({
+    page: z.coerce.number( "page type mismatch"),
     isParticipating: z.boolean(),
     isPublic: z.boolean(),
     isRequested: z.boolean(),
@@ -84,4 +85,8 @@ export const AllEventsQueryParamsSchema = z.object({
 
 export const EventTagsQueryParamsSchema = z.object({
     fetchEventOrganizersTags: z.boolean(),
+});
+
+export const ParticipantsQueryParamsSchema = z.object({
+    page: z.coerce.number( "page type mismatch"),
 })

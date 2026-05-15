@@ -1,4 +1,4 @@
-export type RSVP = "YES" | "NO" | "MAYBE" | "WAITING";
+export type RSVP = "YES" | "NO" | "MAYBE" | "AWAITING";
 
 export interface Event {
     id: number;
@@ -51,7 +51,7 @@ export interface EventParticipant {
     rsvp: RSVP;
 }
 
-export interface EventParticipantResponse {
+export interface EventParticipationResponse {
     id: number;
     event_id: number;
     user_id: number;

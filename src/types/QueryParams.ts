@@ -9,3 +9,7 @@ export interface AllEventsQueryParams {
     isRequested?: boolean; // for event requests ---> rsvp === 'AWAITING', requested and not responded yet
     isOrganized?: boolean;
 }
+
+export interface ParticipantsQueryParams {
+    page?: number;
+}
