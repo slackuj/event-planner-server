@@ -227,7 +227,6 @@ export const fetchEventById = async (id: number, user_id?: number, trx?: Knex.Tr
             "events.description",
             "events.event_date",
             "events.is_public",
-            "events.created_at",
             "location_tags.name as location_name",
             "users.email as organizer_email",
             "users.profile_picture as organizer_profile_picture"

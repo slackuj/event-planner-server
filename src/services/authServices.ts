@@ -250,14 +250,19 @@ export const refreshAccessToken = async (refreshToken: string) => {
     const refreshTokenData = jwt.verify(refreshToken, config.JWT_SECRET_REFRESH) as JwtPayload;
     const expiresAt = new Date(refreshTokenData.exp! * 1000);
 
+    // delete old session
+    await sessionServices.deleteSessionByToken(refreshToken);
+
+    // MAY BE IT'S BETTER TO USE TRANSACTION HERE !!!
+
+    // create new session
     await sessionServices.createSession({
         user_id: user.id,
-        refresh_token: refreshToken,
+        refresh_token: newRefreshToken,
         expires_at: expiresAt
     });
 
-    // delete old session
-    await sessionServices.deleteSessionByToken(refreshToken);
+
 
     logger.info(`[AUTH-SERVICES] [REFRESH] Access token rotated for user: ${user.email}`);
 
