@@ -14,7 +14,7 @@ import {
     EventParticipationRequestSchema,
     EventIdParamsSchema,
     AllEventsQueryParamsSchema, EventIdAndUserIdParamsSchema, EventTagsQueryParamsSchema, OrganizerIdParamsSchema,
-    DeleteEventTagRequestSchema,
+    TagIdParamsSchema,
 } from "../schemas/eventSchema";
 
 export const eventRoutes = Router();
@@ -113,7 +113,7 @@ eventRoutes.delete(
     "/:event_id/tags/:tag_id",
     authenticate,
     validateParams(EventIdParamsSchema),
-    validateRequestBody(DeleteEventTagRequestSchema),// update later to appropriate schema
+    validateParams(TagIdParamsSchema),
     eventController.deleteUserEventTag,
 );
 /**
