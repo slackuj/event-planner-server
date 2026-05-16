@@ -145,11 +145,12 @@ export const fetchAllEvents = async (user_id: number, params: AllEventsQueryPara
     const query = database("events");
 
     if (isOrganized) {
+        // select all organized events: private + public
         query
             .leftJoin("location_tags", "events.location_id", "location_tags.id")
             .join("users", "events.organizer_id", "users.id")
-            .where("events.organizer_id", user_id)
-            .andWhere("events.is_public", isPublic);
+            .where("events.organizer_id", user_id);
+            //.andWhere("events.is_public", isPublic);
     }
     else if (!isParticipating) {
         query
@@ -158,11 +159,12 @@ export const fetchAllEvents = async (user_id: number, params: AllEventsQueryPara
             .where("events.is_public", isPublic);
     }
     else {
+        // select all participating events: public + private
         query.join("event_participants", "events.id", "event_participants.event_id")
             .leftJoin("location_tags", "events.location_id", "location_tags.id")
             .join("users", "events.organizer_id", "users.id")
-            .where("event_participants.user_id", user_id)
-            .andWhere("events.is_public", isPublic);
+            .where("event_participants.user_id", user_id);
+            //.andWhere("events.is_public", isPublic);
 
         if (isRequested) {
             query.andWhere("event_participants.rsvp", "AWAITING");
@@ -179,6 +181,7 @@ export const fetchAllEvents = async (user_id: number, params: AllEventsQueryPara
                 "events.id",
                 "events.title",
                 "events.event_date",
+                "events.is_public",
                 "users.email as organizer_email",
                 "users.profile_picture as organizer_profile_picture",
                 // Include rsvp if it's a participation query

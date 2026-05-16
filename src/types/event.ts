@@ -28,6 +28,7 @@ export interface AllEventsResponse {
     event_date: number; // timestamp
     organizer_email: string;
     organizer_profile_picture: string;
+    is_public: boolean;
     rsvp?: RSVP;
 }
 
