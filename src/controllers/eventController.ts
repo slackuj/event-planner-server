@@ -5,6 +5,7 @@ import {httpCodes} from "../constants/httpCodes";
 import {AuthRequest} from "../types/request";
 import {CreateEventData, CreateUserEventTagRequest} from "../types/event";
 import {AllEventsQueryParams, EventTagsQueryParams, ParticipantsQueryParams} from "../types/QueryParams";
+import {AllEventsQueryParamsSchema} from "../schemas/eventSchema";
 
 export const create = async(
     req: AuthRequest,
@@ -106,7 +107,8 @@ export const fetchAllEvents = async(
 ) => {
     try{
         const user_id = req.user!.id;
-        const params = req.query as AllEventsQueryParams;
+        const params = AllEventsQueryParamsSchema.parse(req.query);
+        //console.log("params inside controller", params);
         const response = await eventServices.fetchAllEvents(user_id, params);
         return successResponse(
             res,

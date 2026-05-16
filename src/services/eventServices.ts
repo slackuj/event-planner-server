@@ -135,6 +135,7 @@ export const deleteEventById = async(event_id: number, user_id: number) => {
 export const fetchAllEvents = async (user_id: number, params: AllEventsQueryParams) => {
 
     const { isParticipating, isPublic, isRequested, isOrganized, page = 1 } = params;
+    //console.log("params inside service", params);
 
     const limit = 4;
     const offset = (page - 1) * limit;

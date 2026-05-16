@@ -15,7 +15,7 @@ export const CreateEventRequestSchema = z.object({
     location_name: z.string()
         .min(5, "Location must be at least 5 characters long")
         .max(255, "Location is too long")
-        .optional(),
+        .nullable(),
 });
 
 /**
@@ -75,16 +75,23 @@ export const OrganizerIdParamsSchema = z.object({
 /**
  * Schema for filtering events via query parameters
  */
+
+// Reusable helper for query param booleans
+const queryBoolean = z.preprocess(
+    (val: string) => (val === 'true' ? true : val === 'false' ? false : val),
+    z.boolean()
+);
+
 export const AllEventsQueryParamsSchema = z.object({
-    page: z.coerce.number( "page type mismatch"),
-    isParticipating: z.boolean(),
-    isPublic: z.boolean(),
-    isRequested: z.boolean(),
-    isOrganized: z.boolean(),
+    page: z.coerce.number().int().positive(),
+    isParticipating: queryBoolean,
+    isPublic: queryBoolean.optional(),
+    isRequested: queryBoolean,
+    isOrganized: queryBoolean,
 });
 
 export const EventTagsQueryParamsSchema = z.object({
-    fetchEventOrganizersTags: z.boolean(),
+    fetchEventOrganizersTags: queryBoolean,
 });
 
 export const ParticipantsQueryParamsSchema = z.object({
