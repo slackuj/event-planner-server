@@ -21,7 +21,7 @@ export const fetchUserById = async (user_id: number) => {
 
 export const fetchUserIdByEmail = async (email: string) => {
     const user = await database<User>("users")
-        .where(email)
+        .where({email})
         .select("id")
         .first();
 

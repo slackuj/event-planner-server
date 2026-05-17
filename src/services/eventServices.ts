@@ -277,7 +277,24 @@ export const addEventParticipation = async(data: Omit<EventParticipant, 'id'>, o
 
     // check for private events or is_organizer
     // fetchEventById EFFECTIVELY SATISFIES CONDITION FOR PUBLIC EVENT OR IS_ORGANIZER !!!
-    await fetchEventById(event_id, organizer_id);
+    // Fetch the event to identify the organizer
+    const event = await database("events")
+        .select<Pick<Event, 'organizer_id' | 'is_public'>>("events.organizer_id", "events.is_public")
+        .where("id", event_id)
+        .first();
+
+    if (!event) {
+        throw new Error("Event not found.");
+    }
+
+    // Authorization: Check if the requester is the organizer
+    if (organizer_id && event.organizer_id !== organizer_id) {
+        throw new Error("Access denied: Cannot add participants.");
+    }
+    // Authorization: Check if event is private and user is not organizer
+    if ( !organizer_id && !event.is_public ) {
+        throw new Error("Access denied: Cannot join private events.");
+    }
 
     const [newParticipation] = await database<EventParticipant>("event_participants")
         .insert(data);
@@ -472,7 +489,6 @@ export const addEventTagById = async(data: CreateUserEventTagRequest) => {
 
         const event_id = await tagsServices.fetchEventTagId(tag_name, trx);
 
-        // upsert user_location_tag
         /// this at least updates `updated_at` field, such that we get to fetch recent tags !!!
         const [upsertResult2] = await tagsServices.upsertUserEventTag({user_id, event_id, tag_id: event_id}, trx);
         if (!upsertResult2) { // i.e if upsertResult2 === 0

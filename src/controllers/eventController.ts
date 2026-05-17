@@ -213,10 +213,6 @@ export const addEventParticipation = async(
         const event_id = Number(req.params.event_id);
         const { rsvp, email } = req.body;
 
-        if(email) {
-           const participant_id = await userServices.fetchUserIdByEmail(email);
-        }
-
         const response = email ?
             await eventServices.addEventParticipation({ user_id: await userServices.fetchUserIdByEmail(email), event_id, rsvp }, user_id)
             :
