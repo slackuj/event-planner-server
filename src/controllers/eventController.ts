@@ -279,10 +279,10 @@ export const fetchAllEventParticipationByEventId = async(
     next: NextFunction,
 ) => {
     try{
-        const {event_id} = req.body;
+        const event_id = Number(req.params.event_id);
         // handle undefined case
         const params = req.query as ParticipantsQueryParams;
-        const response = await eventServices.fetchAllEventParticipationByEventId(Number(event_id), params);
+        const response = await eventServices.fetchAllEventParticipationByEventId(event_id, params);
         return successResponse(
             res,
             {
