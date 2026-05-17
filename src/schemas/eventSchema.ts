@@ -41,7 +41,6 @@ export const AddEventTagRequestSchema = z.object({
     tag_name: z.string()
         .min(2, "Tag name must be at least 2 characters long")
         .max(30, "Tag name is too long"),
-    organizer_id: z.coerce.number(),
 });
 
 /**

@@ -463,18 +463,7 @@ export const removeEventParticipationById = async(
 // adds user_event_tags [used by user && organizer, ===>>> organizer is also user]
 // POST: /events/:id/tags ---> id === event_id
 export const addEventTagById = async(data: CreateUserEventTagRequest) => {
-    const { tag_name, event_id, user_id, organizer_id } = data;
-
-// Authorization Check
-    const isOrganizer = user_id === organizer_id;
-
-    const isParticipant = await database<EventParticipant>("event_participants")
-        .where({ event_id, user_id })
-        .first();
-
-    if (!isOrganizer && !isParticipant) {
-        throw new Error("Access denied. Only organizers or participants can add tags to event.");
-    }
+    const { tag_name, event_id, user_id } = data;
 
     // add or update `updated_at` for tag and return all user_event_tags
     await database.transaction(async (trx) => {
