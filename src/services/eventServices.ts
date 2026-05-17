@@ -522,16 +522,6 @@ export const fetchAllEventTagsById = async(event_id: number, user_id: number, pa
     if (!event) {
         throw new Error("Event not found.");
     }
-    // Authorization Check
-    const isOrganizer = user_id === event.organizer_id;
-
-    const isParticipant = await database<EventParticipant>("event_participants")
-        .where({ event_id, user_id })
-        .first();
-
-    if (!isOrganizer && !isParticipant) {
-        throw new Error("Access denied. Only organizers or participants can fetch event tags.");
-    }
 
     const { fetchEventOrganizersTags } = params;
     let User_Id: number;
