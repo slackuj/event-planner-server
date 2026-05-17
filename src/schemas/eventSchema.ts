@@ -69,8 +69,8 @@ export const TagIdParamsSchema = z.object({
     tag_id: z.coerce.number("user_id type mismatch"),
 });
 
-export const OrganizerIdParamsSchema = z.object({
-    organizer_id: z.coerce.number("organizer_id type mismatch"),
+export const FetchAllEventTagsSchema = z.object({
+    organizer_email: z.email("invalid email address"),
 });
 
 /**

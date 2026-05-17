@@ -171,7 +171,8 @@ export const fetchAllEventTagsById = async(
         const user_id = req.user!.id;
         const event_id = Number(req.params.event_id);
         const params = req.query as EventTagsQueryParams;
-        const {organizer_id} = req.body;
+        const {organizer_email} = req.body;
+        const organizer_id = await userServices.fetchUserIdByEmail(organizer_email);
         const response = await eventServices.fetchAllEventTagsById(event_id, user_id, organizer_id, params);
         return successResponse(
             res,
