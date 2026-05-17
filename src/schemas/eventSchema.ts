@@ -49,6 +49,7 @@ export const AddEventTagRequestSchema = z.object({
  */
 export const EventParticipationRequestSchema = z.object({
     rsvp: z.enum(["AWAITING", "YES", "NO", "MAYBE"],"Please select a valid RSVP status" ),
+    email: z.email("invalid email address").optional(),
 });
 
 export const EventIdAndUserIdParamsSchema = z.object({

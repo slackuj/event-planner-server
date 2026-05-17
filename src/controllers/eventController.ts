@@ -1,5 +1,6 @@
 import {NextFunction, Request, Response} from "express";
 import * as eventServices from "../services/eventServices";
+import * as userServices from "../services/userServices";
 import {successResponse} from "../utils/responseHelper";
 import {httpCodes} from "../constants/httpCodes";
 import {AuthRequest} from "../types/request";
@@ -201,24 +202,46 @@ export const deleteUserEventTag = async(
     }
 };
 
-// /events/:event_id/participation/:user_id
-// eventController.ts
-
-// /events/:event_id/participation/:user_id
-export const upsertEventParticipationById = async(
+// POST /events/:event_id/participation
+export const addEventParticipation = async(
     req: AuthRequest, // Changed from Request to AuthRequest to access req.user
     res: Response,
     next: NextFunction,
 ) => {
     try {
-        const requester_id = req.user!.id; // The person making the request
-        const target_user_id = Number(req.params.user_id); // The user being added/updated
+        const user_id = req.user!.id;
+        const event_id = Number(req.params.event_id);
+        const { rsvp, email } = req.body;
+
+        if(email) {
+           const participant_id = await userServices.fetchUserIdByEmail(email);
+        }
+
+        const response = email ?
+            await eventServices.addEventParticipation({ user_id: await userServices.fetchUserIdByEmail(email), event_id, rsvp }, user_id)
+            :
+            await eventServices.addEventParticipation({ user_id, event_id, ...req.body });
+
+        return successResponse(
+            res,
+            { data: response },
+        );
+    } catch (error) {
+        next(error);
+    }
+};
+
+// PATCH /events/:event_id/participation
+export const updateEventParticipation = async(
+    req: AuthRequest, // Changed from Request to AuthRequest to access req.user
+    res: Response,
+    next: NextFunction,
+) => {
+    try {
+        const user_id = req.user!.id;
         const event_id = Number(req.params.event_id);
 
-        const response = await eventServices.upsertEventParticipationById(
-            { user_id: target_user_id, event_id, ...req.body },
-            requester_id
-        );
+        const response = await eventServices.updateEventParticipation({ user_id, event_id, ...req.body });
 
         return successResponse(
             res,

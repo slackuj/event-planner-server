@@ -19,6 +19,20 @@ export const fetchUserById = async (user_id: number) => {
     return User;
 };
 
+export const fetchUserIdByEmail = async (email: string) => {
+    const user = await database<User>("users")
+        .where(email)
+        .select("id")
+        .first();
+
+    if (!user) {
+        logger.error(`[USER-SERVICES] [FETCH-USER-ID-BY-EMAIL] User not found: ${email}`);
+        throw new Error("User not found");
+    }
+
+    return user.id;
+};
+
 /**
  * Updates user profile details (name, profile_picture, etc.)
  */

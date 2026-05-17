@@ -126,11 +126,19 @@ eventRoutes.delete(
 // WHICH METHOD TO USE FOR UPSERT OPERATION ???????????????????????
 
 eventRoutes.post(
-    "/:event_id/participation/:user_id",
+    "/:event_id/participation/",
     authenticate,
-    validateParams(EventIdAndUserIdParamsSchema),
+    validateParams(EventIdParamsSchema),
     validateRequestBody(EventParticipationRequestSchema),
-    eventController.upsertEventParticipationById
+    eventController.addEventParticipation
+);
+
+eventRoutes.patch(
+    "/:event_id/participation/",
+    authenticate,
+    validateParams(EventIdParamsSchema),
+    validateRequestBody(EventParticipationRequestSchema),
+    eventController.updateEventParticipation
 );
 
 // Remove participation

@@ -55,6 +55,9 @@ export const create = async (data: CreateEventData) => {
             throw new Error("Failed creating new event");
         }
 
+        console.log("[event_id] returned during insert: is it newEvent_id ???");
+        console.log("event_id", event_id);
+
         return await fetchEventById(event_id, undefined, trx);
     });
 };
@@ -268,51 +271,71 @@ export const fetchEventById = async (id: number, user_id?: number, trx?: Knex.Tr
 /************************* SERVICES FOR EVENT PARTICIPANTS ***************************************/
 /*************************************************************************************************/
 
+// add event participation : POST `/events/:event_id/participation`
+export const addEventParticipation = async(data: Omit<EventParticipant, 'id'>, organizer_id?: number) => {
+    const { event_id, user_id } = data;
+
+    // check for private events or is_organizer
+    // fetchEventById EFFECTIVELY SATISFIES CONDITION FOR PUBLIC EVENT OR IS_ORGANIZER !!!
+    await fetchEventById(event_id, organizer_id);
+
+    const [newParticipation] = await database<EventParticipant>("event_participants")
+        .insert(data);
+
+    if (!newParticipation) {
+        throw new Error("Failed adding Event Participation");
+    }
+
+    console.log("[newParticipation] returned during insert: is it newParticipation_id ???");
+    console.log("newParticipation", newParticipation);
+
+    const participation =  await fetchEventParticipationById({user_id, event_id});
+
+    /**********************************************************************************************
+     **************** --- HANDLE THIS undefined return LATER --- **********************************
+     *********************************************************************************************/
+    if (!participation) {
+        throw new Error("Error fetching Event Participation.");
+    }
+
+    return participation;
+};
+
 // upsert event participation by user_id
 // /events/:id/participation/:userId ---> id  = event_id
 // eventServices.ts
+// used by user for self updates, organizer can remove only
 
-export const upsertEventParticipationById = async(
+export const updateEventParticipation = async(
     data: Omit<EventParticipant, 'id'>,
-    requester_id: number // Added requester_id for authorization
 ) => {
-    const { event_id } = data;
+    const { event_id, user_id, rsvp } = data;
 
-    // 1. Fetch event details to check if it's public or who the organizer is
-    const event = await database("events")
-        .select<Pick<Event, 'is_public' | 'organizer_id'>>("is_public", "organizer_id")
-        .where("id", event_id)
-        .first();
+    const updatedEvent = await database<EventParticipant>("event_participants")
+        .update("rsvp", rsvp)
+        .where({event_id, user_id});
 
-    if (!event) {
-        throw new Error("Event not found.");
+    if (updatedEvent === 0) {
+        throw new Error("Event Participation not found.");
     }
 
-    // 2. Check if the requester is already a participant
-    const existingParticipation = await database<EventParticipant>("event_participants")
-        .where({ event_id, user_id: requester_id })
-        .first();
-
-    // 3. Authorization Logic:
-    // Allow if: Event is public OR requester is organizer OR requester is already a participant
-    const isPublic = event.is_public;
-    const isOrganizer = event.organizer_id === requester_id;
-    const isParticipant = !!existingParticipation;
-
-    if (!isPublic && !isOrganizer && !isParticipant) {
-        throw new Error("Access denied. You do not have permission to modify participation for this private event.");
-    }
-
-    // 4. Proceed with upsert if authorized
-    await database<EventParticipant>("event_participants").upsert(data);
-
-    return await fetchEventParticipationById({
+    const participation =  await fetchEventParticipationById({
         user_id: data.user_id,
         event_id: data.event_id
     });
+
+    /**********************************************************************************************
+     **************** --- HANDLE THIS undefined return LATER --- **********************************
+     *********************************************************************************************/
+    if (!participation) {
+        throw new Error("Error fetching Event Participation.");
+    }
+
+    return participation;
 };
 
 export const fetchEventParticipationById = async(data: Omit<EventParticipant, 'id' | 'rsvp'>) => {
+
     const eventParticipation =  database("event_participants")
         .join("users", "users.id", "event_participants.user_id")
         .select<EventParticipationResponse>(
@@ -331,6 +354,7 @@ export const fetchEventParticipationById = async(data: Omit<EventParticipant, 'i
     }
 
     // why is it still returning undefined ?
+    // UNDEFINED IS NOT RETURNED OF REMOVING .first() ????
     return eventParticipation;
 };
 
