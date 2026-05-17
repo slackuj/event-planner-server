@@ -90,7 +90,7 @@ export const upsertUserEventTag = async(data: CreateUserEventTagData, trx?: Knex
             user_id,
             tag_id,
             event_id,
-            updated_at: new Date()
+            //updated_at: new Date() HANDLE 'updated_at' field later, ABSENT IN DATABASE NOW, DO I NEED IT ???
         });
 };
 
