@@ -511,10 +511,19 @@ export const addEventTagById = async(data: CreateUserEventTagRequest) => {
         );
 }
 
-export const fetchAllEventTagsById = async(event_id: number, user_id: number, organizer_id: number, params: EventTagsQueryParams) => {
+export const fetchAllEventTagsById = async(event_id: number, user_id: number, params: EventTagsQueryParams) => {
 
+    // Fetch the event to identify the organizer
+    const event = await database("events")
+        .select<Pick<Event, 'organizer_id'>>("events.organizer_id")
+        .where("id", event_id)
+        .first();
+
+    if (!event) {
+        throw new Error("Event not found.");
+    }
     // Authorization Check
-    const isOrganizer = user_id === organizer_id;
+    const isOrganizer = user_id === event.organizer_id;
 
     const isParticipant = await database<EventParticipant>("event_participants")
         .where({ event_id, user_id })
@@ -526,7 +535,7 @@ export const fetchAllEventTagsById = async(event_id: number, user_id: number, or
 
     const { fetchEventOrganizersTags } = params;
     let User_Id: number;
-    if (fetchEventOrganizersTags) User_Id = organizer_id;
+    if (fetchEventOrganizersTags) User_Id = event.organizer_id;
     // else fetch participant tags
     else User_Id = user_id;
     // HANDLE LATER

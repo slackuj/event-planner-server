@@ -13,7 +13,7 @@ import {
     AddEventTagRequestSchema,
     EventParticipationRequestSchema,
     EventIdParamsSchema,
-    AllEventsQueryParamsSchema, EventIdAndUserIdParamsSchema, EventTagsQueryParamsSchema, FetchAllEventTagsSchema,
+    AllEventsQueryParamsSchema, EventIdAndUserIdParamsSchema, EventTagsQueryParamsSchema,
     TagIdParamsSchema,
 } from "../schemas/eventSchema";
 
@@ -105,7 +105,6 @@ eventRoutes.get(
     authenticate,
     validateParams(EventIdParamsSchema),
     validateQueryParams(EventTagsQueryParamsSchema),
-    validateRequestBody(FetchAllEventTagsSchema),// update later to appropriate schema
     eventController.fetchAllEventTagsById,
 );
 
