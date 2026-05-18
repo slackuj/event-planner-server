@@ -6,7 +6,7 @@ import {httpCodes} from "../constants/httpCodes";
 import {AuthRequest} from "../types/request";
 import {CreateEventData, CreateUserEventTagRequest} from "../types/event";
 import {AllEventsQueryParams, EventTagsQueryParams, ParticipantsQueryParams} from "../types/QueryParams";
-import {AllEventsQueryParamsSchema} from "../schemas/eventSchema";
+import {AllEventsQueryParamsSchema, EventTagsQueryParamsSchema} from "../schemas/eventSchema";
 
 export const create = async(
     req: AuthRequest,
@@ -170,7 +170,7 @@ export const fetchAllEventTagsById = async(
     try{
         const user_id = req.user!.id;
         const event_id = Number(req.params.event_id);
-        const params = req.query as EventTagsQueryParams;
+        const params = EventTagsQueryParamsSchema.parse(req.query);
         const response = await eventServices.fetchAllEventTagsById(event_id, user_id, params);
         return successResponse(
             res,
@@ -190,8 +190,8 @@ export const deleteUserEventTag = async(
     try{
         const user_id = req.user!.id;
         const event_id = Number(req.params.event_id);
-        const tag_id = Number(req.params.tag_id);
-        const response = await eventServices.deleteUserEventTag(user_id, event_id, tag_id);
+        const user_event_tag_id = Number(req.params.user_event_tag_id);
+        const response = await eventServices.deleteUserEventTag(user_id, event_id, user_event_tag_id);
         return successResponse(
             res,
             { data: response },

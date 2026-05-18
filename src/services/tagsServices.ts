@@ -21,10 +21,13 @@ export const upsertLocationTag = async(data: CreateLocationTagRequest, trx?: Kne
     const slug = slugify(name.trim(), {lower: true, strict: true});
     const queryBuilder = trx ? trx<LocationTag>("location_tags") : database<LocationTag>("location_tags");
     return queryBuilder
-        .upsert({
+        .insert({
             name: name.trim(),
             slug,
-            // check if it works even by skipping updated_at field !!!
+            updated_at: new Date()
+        })
+        .onConflict("slug")
+        .merge({
             updated_at: new Date()
         });
 };
@@ -72,11 +75,15 @@ export const upsertEventTag = async(data: CreateEventTagRequest, trx?: Knex.Tran
     const { name } = data;
     const slug = slugify(name.trim(), {lower: true, strict: true});
     const queryBuilder = trx ? trx<EventTag>("event_tags") : database<EventTag>("event_tags");
+
     return queryBuilder
-        .upsert({
+        .insert({
             name: name.trim(),
             slug,
-            // check if it works even by skipping updated_at field !!!
+            updated_at: new Date()
+        })
+        .onConflict("slug")
+        .merge({
             updated_at: new Date()
         });
 };

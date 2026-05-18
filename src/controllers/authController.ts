@@ -77,7 +77,7 @@ export const login = async(
         const response = await authServices.login(req.body);
         if ("expires_at" in response) {
             return successResponse(res, {
-                    data: {...response, next: "/confirmMe"},
+                    data: {...response, next: "/users/confirm"},
                 },
             );
         } else {
@@ -92,7 +92,7 @@ export const login = async(
                 res,
                 { data:
                         {
-                            ...response,
+                            accessToken: response.accessToken,
                             next: "/dashboard",
                         }
                 },

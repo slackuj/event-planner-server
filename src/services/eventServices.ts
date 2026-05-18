@@ -471,15 +471,17 @@ export const addEventTagById = async(data: CreateUserEventTagRequest) => {
         // upsert location_tag
         /// this at least updates `updated_at` field, such that we get to fetch recent tags !!!
         const [upsertResult] = await tagsServices.upsertEventTag({name: tag_name}, trx);
+        console.log("upsertResult", upsertResult);
         if (!upsertResult) {
             logger.error(`[EVENT-SERVICES] [ADD-EVENT-TAG] failed upserting location_tag`);
             throw new Error("Failed accessing event tag. Please try again.");
         }
 
-        const event_id = await tagsServices.fetchEventTagId(tag_name, trx);
+        const tag_id = await tagsServices.fetchEventTagId(tag_name, trx);
+        console.log("tag_id", tag_id);
 
         /// this at least updates `updated_at` field, such that we get to fetch recent tags !!!
-        const [upsertResult2] = await tagsServices.upsertUserEventTag({user_id, event_id, tag_id: event_id}, trx);
+        const [upsertResult2] = await tagsServices.upsertUserEventTag({user_id, event_id, tag_id}, trx);
         if (!upsertResult2) { // i.e if upsertResult2 === 0
             logger.error(`[EVENT-SERVICES] [ADD-EVENT-TAG] failed upserting user_event_tag`);
             throw new Error("Failed accessing event. Please try again.");
@@ -534,9 +536,9 @@ export const fetchAllEventTagsById = async(event_id: number, user_id: number, pa
 };
 
 // delete user_event_tag : tage === tag_name
-export const deleteUserEventTag = async(user_id: number, event_id: number, tag_id: number) => {
+export const deleteUserEventTag = async(user_id: number, event_id: number, user_event_tag_id: number) => {
     await database<UserEventTag>("user_event_tags")
-        .where({user_id, tag_id, event_id})
+        .where({user_id, id: user_event_tag_id, event_id})
         .del();
 
     //if (result === 0) return "nothing to delete";

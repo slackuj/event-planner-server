@@ -11,7 +11,7 @@ export const CreateEventRequestSchema = z.object({
         .min(10, "Description must be at least 10 characters long")
         .max(1000, "Description is too long"),
     event_date: z.coerce.date(),
-    is_public: z.boolean().default(false),
+    is_public: z.boolean(),
     location_name: z.string()
         .min(5, "Location must be at least 5 characters long")
         .max(255, "Location is too long")
@@ -53,7 +53,7 @@ export const EventParticipationRequestSchema = z.object({
 
 export const EventIdAndUserIdParamsSchema = z.object({
     event_id: z.coerce.number( "event_id type mismatch"),
-    user_id: z.coerce.number("user_id type mismatch"),
+    tag_id: z.coerce.number("user_id type mismatch"),
 });
 
 export const EventIdParamsSchema = z.object({
@@ -65,7 +65,7 @@ export const UserIdParamsSchema = z.object({
 });
 
 export const TagIdParamsSchema = z.object({
-    tag_id: z.coerce.number("user_id type mismatch"),
+    tag_id: z.coerce.number("tag_id type mismatch"),
 });
 
 /**
@@ -93,3 +93,8 @@ export const EventTagsQueryParamsSchema = z.object({
 export const ParticipantsQueryParamsSchema = z.object({
     page: z.coerce.number( "page type mismatch"),
 })
+
+export const EventIdAndTagIdParamsSchema = z.object({
+    event_id: z.coerce.number("event_id type mismatch"),
+    user_event_tag_id: z.coerce.number("tag_id type mismatch"),
+});
