@@ -108,6 +108,7 @@ export const fetchAllEvents = async(
 ) => {
     try{
         const user_id = req.user!.id;
+        console.log("i am here");
         const params = AllEventsQueryParamsSchema.parse(req.query);
         //console.log("params inside controller", params);
         const response = await eventServices.fetchAllEvents(user_id, params);
@@ -258,7 +259,7 @@ export const fetchEventParticipationById = async(
         const requested_id = Number(req.params.user_id);
         const event_id = Number(req.params.event_id);
 
-        if( user_id ! === requested_id ){
+        if( user_id !== requested_id ){
             return errorResponse(res, {
                 status: httpCodes.UNAUTHORIZED.statusCode,
                 message: httpCodes.UNAUTHORIZED.message,
@@ -266,6 +267,7 @@ export const fetchEventParticipationById = async(
         }
         // handle undefined case
         const response = await eventServices.fetchEventParticipationById({user_id, event_id});
+        console.log(response);
         return successResponse(
             res,
             { data: response },

@@ -72,10 +72,19 @@ export const TagIdParamsSchema = z.object({
  * Schema for filtering events via query parameters
  */
 
-// Reusable helper for query param booleans
+// Reusable helper that handles both raw strings AND already parsed booleans
 const queryBoolean = z.preprocess(
-    (val: string) => (val === 'true' ? true : val === 'false' ? false : val),
+    (val: string) => (
+        val === 'true' ? true : val === 'false' ? false : val
+    ),
     z.boolean()
+);
+
+const queryTimestamp = z.preprocess(
+    (val: string) => (
+        Number(val)
+    ),
+    z.coerce.date()
 );
 
 export const AllEventsQueryParamsSchema = z.object({
@@ -84,6 +93,10 @@ export const AllEventsQueryParamsSchema = z.object({
     isPublic: queryBoolean.optional(),
     isRequested: queryBoolean,
     isOrganized: queryBoolean,
+    // Accepts either a raw string to parse OR an already generated Date object
+    start_date: queryTimestamp,
+    end_date: queryTimestamp,
+    sort_order: z.enum(['asc', 'desc']),
 });
 
 export const EventTagsQueryParamsSchema = z.object({

@@ -6,8 +6,11 @@ export interface AllEventsQueryParams {
     page?: number;
     isParticipating?: boolean;
     isPublic?: boolean | undefined;
-    isRequested?: boolean; // for event requests ---> rsvp === 'AWAITING', requested and not responded yet
+    isRequested?: boolean;
     isOrganized?: boolean;
+    start_date?: Date;
+    end_date?: Date;
+    sort_order?: 'asc' | 'desc';
 }
 
 export interface ParticipantsQueryParams {

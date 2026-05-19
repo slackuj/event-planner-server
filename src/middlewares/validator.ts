@@ -25,7 +25,9 @@ export const validateQueryParams = (schema: z.ZodType<any>) => (
     next: NextFunction
 ) => {
 
+    //console.log(req.query);
     const result = schema.safeParse(req.query);
+    //console.log(result);
 
     if (!result.success) {
         return res.status(400).json({

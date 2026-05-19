@@ -137,8 +137,17 @@ export const deleteEventById = async(event_id: number, user_id: number) => {
 // fetchAllEvents
 export const fetchAllEvents = async (user_id: number, params: AllEventsQueryParams) => {
 
-    const { isParticipating, isPublic, isRequested, isOrganized, page = 1 } = params;
-    //console.log("params inside service", params);
+    const {
+        isParticipating,
+        isPublic,
+        isRequested,
+        isOrganized,
+        page = 1,
+        start_date = new Date(0),
+        end_date = new Date(2147483647000),
+        sort_order = 'desc',
+    } = params;
+    console.log("params inside service", params);
 
     const limit = 4;
     const offset = (page - 1) * limit;
@@ -177,6 +186,10 @@ export const fetchAllEvents = async (user_id: number, params: AllEventsQueryPara
         }
     }
 
+    // date-filtering
+        query.where("events.event_date", ">=", start_date);
+        query.where("events.event_date", "<=", end_date);
+
     // 3. Execute count and data fetch in parallel
     const [totalResult, events] = await Promise.all([
         query.clone().count("events.id as total").first(),
@@ -193,7 +206,7 @@ export const fetchAllEvents = async (user_id: number, params: AllEventsQueryPara
             )
             .limit(limit)
             .offset(offset)
-            .orderBy("events.event_date", "desc")
+            .orderBy("events.event_date", sort_order)
     ]);
 
     if (!events) {
@@ -354,7 +367,7 @@ export const updateEventParticipation = async(
 // returns event participation for current_user only
 export const fetchEventParticipationById = async(data: Omit<EventParticipant, 'id' | 'rsvp'>) => {
 
-    const eventParticipation =  database("event_participants")
+    const eventParticipation =  await database("event_participants")
         .join("users", "users.id", "event_participants.user_id")
         .select<ParticipationResponse>(
             "event_participants.rsvp",
@@ -364,8 +377,10 @@ export const fetchEventParticipationById = async(data: Omit<EventParticipant, 'i
         .andWhere("event_participants.user_id", data.user_id)
         .first();
 
+    console.log("eventParticipation", eventParticipation);
     if(!eventParticipation) {
         logger.warn(`[EVENT-SERVICES] [FETCH-EVENT-PARTICIPATION] failed retrieving event participation for user: ${data.user_id} event:${data.event_id}`);
+        console.log("i am here");
         return { rsvp: undefined };
     }
 
