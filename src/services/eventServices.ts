@@ -14,6 +14,7 @@ import * as tagsServices from "./tagsServices";
 import {Knex} from "knex";
 import {logger} from "../utils/logger";
 import {AllEventsQueryParams, EventTagsQueryParams, ParticipantsQueryParams} from "../types/QueryParams";
+import {DEFAULT_END_DATE, DEFAULT_START_DATE} from "../constants/appConstants";
 
 export const create = async (data: CreateEventData) => {
     const { title, description, event_date, organizer_id, is_public } = data;
@@ -143,8 +144,8 @@ export const fetchAllEvents = async (user_id: number, params: AllEventsQueryPara
         isRequested,
         isOrganized,
         page = 1,
-        start_date = new Date(0),
-        end_date = new Date(2147483647000),
+        start_date = new Date(DEFAULT_START_DATE),
+        end_date = new Date(DEFAULT_END_DATE),
         sort_order = 'desc',
     } = params;
     console.log("params inside service", params);
