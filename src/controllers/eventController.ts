@@ -1,7 +1,7 @@
 import {NextFunction, Request, Response} from "express";
 import * as eventServices from "../services/eventServices";
 import * as userServices from "../services/userServices";
-import {successResponse} from "../utils/responseHelper";
+import {errorResponse, successResponse} from "../utils/responseHelper";
 import {httpCodes} from "../constants/httpCodes";
 import {AuthRequest} from "../types/request";
 import {CreateEventData, CreateUserEventTagRequest} from "../types/event";
@@ -215,7 +215,7 @@ export const addEventParticipation = async(
         const response = email ?
             await eventServices.addEventParticipation({ user_id: await userServices.fetchUserIdByEmail(email), event_id, rsvp }, user_id)
             :
-            await eventServices.addEventParticipation({ user_id, event_id, ...req.body });
+            await eventServices.addEventParticipation({ user_id, event_id, rsvp });
 
         return successResponse(
             res,
@@ -249,13 +249,21 @@ export const updateEventParticipation = async(
 
 // /events/:event_id/participation/:user_id
 export const fetchEventParticipationById = async(
-    req: Request,
+    req: AuthRequest,
     res: Response,
     next: NextFunction,
 ) => {
     try{
-        const user_id = Number(req.params.user_id);
+        const user_id = req.user!.id;
+        const requested_id = Number(req.params.user_id);
         const event_id = Number(req.params.event_id);
+
+        if( user_id ! === requested_id ){
+            return errorResponse(res, {
+                status: httpCodes.UNAUTHORIZED.statusCode,
+                message: httpCodes.UNAUTHORIZED.message,
+            });
+        }
         // handle undefined case
         const response = await eventServices.fetchEventParticipationById({user_id, event_id});
         return successResponse(

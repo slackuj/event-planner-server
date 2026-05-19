@@ -53,7 +53,7 @@ export const EventParticipationRequestSchema = z.object({
 
 export const EventIdAndUserIdParamsSchema = z.object({
     event_id: z.coerce.number( "event_id type mismatch"),
-    tag_id: z.coerce.number("user_id type mismatch"),
+    user_id: z.coerce.number("user_id type mismatch"),
 });
 
 export const EventIdParamsSchema = z.object({

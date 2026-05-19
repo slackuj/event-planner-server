@@ -159,6 +159,6 @@ eventRoutes.get(
 eventRoutes.get(
     "/:event_id/participation/:user_id",
     authenticate,
-    validateParams(EventIdParamsSchema),
+    validateParams(EventIdAndUserIdParamsSchema),
     eventController.fetchEventParticipationById
 );

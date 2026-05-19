@@ -61,6 +61,10 @@ export interface EventParticipationResponse {
     rsvp: RSVP;
 }
 
+export interface ParticipationResponse {
+    rsvp: RSVP | undefined;
+}
+
 export interface LocationTag {
     id: number;
     name: string;

@@ -4,7 +4,7 @@ import {
     CreateUserEventTagRequest,
     Event,
     EventParticipant, EventParticipationResponse, EventTagResponse,
-    EventWithLocationAndOrganizer,
+    EventWithLocationAndOrganizer, ParticipationResponse,
     UpdateEventLocationRequest,
     UpdateEventRequest, UserEventTag
 } from "../types/event";
@@ -101,7 +101,7 @@ export const updateEventLocationById = async (data: UpdateEventLocationRequest, 
             }
 
         // Update the Event Location
-        await database<Event>("events").update({location_id}).where({id: event_id});
+        await trx("events").update({location_id}).where({id: event_id});
         //if (updatedRow === 0) return null;
         return await fetchEventById(event_id, undefined, trx);
     });
@@ -351,14 +351,13 @@ export const updateEventParticipation = async(
     return participation;
 };
 
+// returns event participation for current_user only
 export const fetchEventParticipationById = async(data: Omit<EventParticipant, 'id' | 'rsvp'>) => {
 
     const eventParticipation =  database("event_participants")
         .join("users", "users.id", "event_participants.user_id")
-        .select<EventParticipationResponse>(
-            "event_participants.*",
-            "users.email as user_email",
-            "users.profile_picture as user_profile_picture"
+        .select<ParticipationResponse>(
+            "event_participants.rsvp",
         )
         // check if we can use .where(data) !!!
         .where("event_participants.event_id", data.event_id)
@@ -367,7 +366,7 @@ export const fetchEventParticipationById = async(data: Omit<EventParticipant, 'i
 
     if(!eventParticipation) {
         logger.warn(`[EVENT-SERVICES] [FETCH-EVENT-PARTICIPATION] failed retrieving event participation for user: ${data.user_id} event:${data.event_id}`);
-        throw new Error("Failed to retrieve event participation. Please try again.");
+        return { rsvp: undefined };
     }
 
     // why is it still returning undefined ?
