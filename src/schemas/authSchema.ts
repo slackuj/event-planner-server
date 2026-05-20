@@ -34,6 +34,6 @@ export const PasswordUpdateRequestSchema = z.object({
 }).refine(
     (data) => data.new_password === data.confirm_new_password, {
         message: "Passwords don't match",
-        path: ["confirm_password"], // This attaches the error to the confirm_password field
+        path: ["confirm_password"],
     }
 ).transform(({ confirm_new_password, ...data }) => data);// strips confirm_new_password from the final object returned by zod after validation (i.e schema.safeParse(req.body) inside validator.ts !!!)

@@ -13,6 +13,7 @@ export interface AllEventsQueryParams {
     sort_order?: 'asc' | 'desc';
 }
 
+/*
 export interface ParticipantsQueryParams {
     page?: number;
-}
+}*/

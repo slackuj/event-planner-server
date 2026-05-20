@@ -308,7 +308,7 @@ export const updatePassword = async (data: Omit<PasswordUpdateRequest, 'confirm_
             .update({ password: hashedNewPassword, updated_at: new Date() });
 
         // delete all sessions
-        await sessionServices.deleteSessionsByUserId(user.id);
+        await sessionServices.deleteSessionsByUserId(user.id, trx);
 
         // create new session
         const refreshTokenData = jwt.verify(newRefreshToken, config.JWT_SECRET_REFRESH) as JwtPayload;
@@ -317,7 +317,7 @@ export const updatePassword = async (data: Omit<PasswordUpdateRequest, 'confirm_
             user_id: user.id,
             refresh_token: newRefreshToken,
             expires_at: expiresAt
-        });
+        }, trx);
     });
 
     logger.info(`[AUTH-SERVICES] [UPDATE PASSWORD] Password updated for user: ${email}`);

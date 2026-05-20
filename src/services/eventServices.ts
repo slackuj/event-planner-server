@@ -13,7 +13,7 @@ import slugify from "slugify";
 import * as tagsServices from "./tagsServices";
 import {Knex} from "knex";
 import {logger} from "../utils/logger";
-import {AllEventsQueryParams, EventTagsQueryParams, ParticipantsQueryParams} from "../types/QueryParams";
+import {AllEventsQueryParams, EventTagsQueryParams} from "../types/QueryParams";
 import {DEFAULT_END_DATE, DEFAULT_START_DATE} from "../constants/appConstants";
 
 export const create = async (data: CreateEventData) => {
@@ -77,6 +77,20 @@ export const updateEventLocationById = async (data: UpdateEventLocationRequest, 
 
     const { location_name } = data;
     const slug = slugify(location_name, {lower: true, strict: true});
+
+    const event = await database("events")
+        .select<Pick<Event, 'organizer_id' | 'is_public'>>("events.organizer_id", "events.is_public")
+        .where("id", event_id)
+        .first();
+
+    if (!event) {
+        throw new Error("Event not found.");
+    }
+
+    // Authorization: Check if the requester is the organizer
+    if (event.organizer_id !== organizer_id) {
+        throw new Error("Unauthorized: Cannot update event location.");
+    }
 
     return await database.transaction(async (trx) => {
 
@@ -306,7 +320,8 @@ export const addEventParticipation = async(data: Omit<EventParticipant, 'id'>, o
         throw new Error("Access denied: Cannot add participants.");
     }
     // Authorization: Check if event is private and user is not organizer
-    if ( !organizer_id && !event.is_public ) {
+    // allow organizer to join private directly !!!
+    if ( !organizer_id && !event.is_public && event.organizer_id !== user_id ) {
         throw new Error("Access denied: Cannot join private events.");
     }
 
@@ -390,11 +405,11 @@ export const fetchEventParticipationById = async(data: Omit<EventParticipant, 'i
     return eventParticipation;
 };
 
-export const fetchAllEventParticipationByEventId = async(event_id: number, params: ParticipantsQueryParams) => {
+export const fetchAllEventParticipationByEventId = async(event_id: number) => { //}, params: ParticipantsQueryParams) => {
 
-    const { page = 1 } = params;
+    /*const { page = 1 } = params;
     const limit = 4;
-    const offset = (page - 1) * limit;
+    const offset = (page - 1) * limit;*/
 
     // Base Query
     const query = database<EventParticipant>("event_participants")
@@ -410,8 +425,8 @@ export const fetchAllEventParticipationByEventId = async(event_id: number, param
                 "users.email as user_email",
                 "users.profile_picture as user_profile_picture"
             )
-            .limit(limit)
-            .offset(offset)
+            //.limit(limit)
+            //.offset(offset)
             .orderBy("users.email", "asc")
     ]);
 
@@ -419,17 +434,17 @@ export const fetchAllEventParticipationByEventId = async(event_id: number, param
         throw new Error("Failed to retrieve participants.");
     }
 
-    const totalParticipants = parseInt(totalResult?.total as string) || 0;
-    const totalPages = Math.ceil(totalParticipants / limit);
+    //const totalParticipants = parseInt(totalResult?.total as string) || 0;
+    //const totalPages = Math.ceil(totalParticipants / limit);
 
     return {
         participants,
-        metadata: {
+        /*metadata: {
             totalParticipants,
             totalPages,
             page,
             limit
-        }
+        }*/
     };
 };
 
@@ -461,7 +476,8 @@ export const removeEventParticipationById = async(
         .where({ event_id, user_id })
         .del();
 
-    // cleanup user_event_tags for the id if any
+    // cleanup user_event_tags for the id if any THIS BLOCK SHALL BE NOT NEEDED AFTERWARDS, AS user_event_tags has been updated to reference event_participants !!!
+    // REMOVE THIS LATER ON MIGRATION
     await database("user_event_tags")
         .where({event_id, user_id})
         .del();
@@ -481,19 +497,19 @@ export const addEventTagById = async(data: CreateUserEventTagRequest) => {
     const { tag_name, event_id, user_id } = data;
 
     // add or update `updated_at` for tag and return all user_event_tags
-    await database.transaction(async (trx) => {
+    const tag_id = await database.transaction(async (trx) => {
 
         // upsert location_tag
         /// this at least updates `updated_at` field, such that we get to fetch recent tags !!!
-        const [upsertResult] = await tagsServices.upsertEventTag({name: tag_name}, trx);
-        console.log("upsertResult", upsertResult);
-        if (!upsertResult) {
+        const [tag_id] = await tagsServices.upsertEventTag({name: tag_name}, trx); // upsert return tag_id on success !!!
+        //console.log("upsertResult", upsertResult);
+        if (!tag_id) {
             logger.error(`[EVENT-SERVICES] [ADD-EVENT-TAG] failed upserting location_tag`);
             throw new Error("Failed accessing event tag. Please try again.");
         }
 
-        const tag_id = await tagsServices.fetchEventTagId(tag_name, trx);
-        console.log("tag_id", tag_id);
+        //const tag_id = await tagsServices.fetchEventTagId(tag_name, trx);
+        //console.log("tag_id", tag_id);
 
         /// this at least updates `updated_at` field, such that we get to fetch recent tags !!!
         const [upsertResult2] = await tagsServices.upsertUserEventTag({user_id, event_id, tag_id}, trx);
@@ -502,6 +518,8 @@ export const addEventTagById = async(data: CreateUserEventTagRequest) => {
             throw new Error("Failed accessing event. Please try again.");
         }
 
+        return tag_id;
+
     });
     // return event_tag
     return database("event_tags")
@@ -509,12 +527,14 @@ export const addEventTagById = async(data: CreateUserEventTagRequest) => {
         .join("user_event_tags", "event_tags.id", "user_event_tags.tag_id")
         .where("user_event_tags.user_id", user_id)
         .andWhere("user_event_tags.event_id", event_id)
+        .andWhere("user_event_tags.tag_id", tag_id)
         .select<EventTagResponse>(
             "event_tags.name as name",
             "user_event_tags.id as id",
             "user_event_tags.event_id",
             "user_event_tags.user_id",
-        );
+        )
+        .first();
 }
 
 export const fetchAllEventTagsById = async(event_id: number, user_id: number, params: EventTagsQueryParams) => {

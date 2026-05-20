@@ -10,9 +10,7 @@ export const UpdateUserRequestSchema = z.object({
         .max(50, "Name is too long")
         .optional(),
     profile_picture: z.url("Invalid image URL")
-        .optional(),
-}).refine(data => data.name || data.profile_picture, {
-    message: "At least one field (name or profile_picture) must be provided for update",
+        .optional().nullable(),
 });
 
 /**

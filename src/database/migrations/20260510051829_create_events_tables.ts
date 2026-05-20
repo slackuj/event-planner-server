@@ -56,8 +56,8 @@ export async function up(knex: Knex): Promise<void> {
         // User Event Tags
         .createTable("user_event_tags", (table) => {
             table.increments("id").primary();
-            table.integer("user_id").unsigned().references("id").inTable("users").onDelete("CASCADE");
-            table.integer("event_id").unsigned().references("id").inTable("events").onDelete("CASCADE");
+            table.integer("user_id").unsigned().references("id").inTable("event_participants").onDelete("CASCADE");
+            table.integer("event_id").unsigned().references("id").inTable("event_participants").onDelete("CASCADE");
             // not unique, multiple events can hold same tags
             table.integer("tag_id").unsigned().references("id").inTable("event_tags").onDelete("CASCADE");
         })
