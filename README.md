@@ -14,6 +14,7 @@ This project provides following features:<br>
 <br>**Authentication & Authorization**<br>
 * user signup and login<br>
 * secure authentication using JWT<br>
+* refresh token implementation
 * authorization<br>
 * email verification<br>
 
