@@ -1,4 +1,4 @@
-export const appRoles = {
-    INCOMPLETE: "INCOMPLETE",
+export const userRoles = {
+    UNCONFIRMED: "UNCONFIRMED",
     USER: "USER",
 } as const;

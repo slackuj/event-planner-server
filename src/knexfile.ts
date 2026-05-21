@@ -3,7 +3,7 @@ const knexConfig = {
     development: {
         client: "mysql2",
         connection: {
-            host: "127.0.0.1",
+            host: config.MYSQL_URI,
             user: config.MYSQL_USER,
             password: config.MYSQL_PASSWORD,
             database: config.MYSQL_DATABASE,
@@ -11,6 +11,11 @@ const knexConfig = {
         migrations: {
             // Ensure this directory exists or Knex can create it
             directory: "./database/migrations",
+            extension: "ts",
+        },
+        seeds: {
+            // Ensure this directory exists or Knex can create it
+            directory: "./database/seeds",
             extension: "ts",
         },
     },

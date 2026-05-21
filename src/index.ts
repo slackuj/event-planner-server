@@ -16,7 +16,7 @@ app.use(express.json());
 
 app.use(cookieParser());
 const corsOptions = {
-    origin: "http://localhost:5173",
+    origin: config.FRONTEND_ORIGIN,
     //origin: "https://opencourse-academy.vercel.app",
     credentials: true,// Allow cookies/headers to be sent
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],

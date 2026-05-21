@@ -154,7 +154,7 @@ export const fetchAllEvents = async (user_id: number, params: AllEventsQueryPara
 
     const {
         isParticipating,
-        isPublic,
+        isPublic, // Can be true, false, or undefined
         isRequested,
         isOrganized,
         page = 1,
@@ -167,32 +167,30 @@ export const fetchAllEvents = async (user_id: number, params: AllEventsQueryPara
     const limit = 4;
     const offset = (page - 1) * limit;
 
-
-    // 2. Initialize the Base Query
-    // We start with a base query to reuse the same logic for both data and counting
+    // Initialize the Base Query
     const query = database("events");
 
+    // Build Core Joins & Base Tab Filters
     if (isOrganized) {
-        // select all organized events: private + public
+        // Select all organized events (where the user is the organizer)
         query
             .leftJoin("location_tags", "events.location_id", "location_tags.id")
             .join("users", "events.organizer_id", "users.id")
             .where("events.organizer_id", user_id);
-            //.andWhere("events.is_public", isPublic);
     }
     else if (!isParticipating) {
+        // Broad Discover/All events view (typically just public events by default,
+        // but structured here to align with your original conditional block)
         query
             .leftJoin("location_tags", "events.location_id", "location_tags.id")
-            .join("users", "events.organizer_id", "users.id")
-            .where("events.is_public", isPublic);
+            .join("users", "events.organizer_id", "users.id");
     }
     else {
-        // select all participating events: public + private
+        // Select all participating events
         query.join("event_participants", "events.id", "event_participants.event_id")
             .leftJoin("location_tags", "events.location_id", "location_tags.id")
             .join("users", "events.organizer_id", "users.id")
             .where("event_participants.user_id", user_id);
-            //.andWhere("events.is_public", isPublic);
 
         if (isRequested) {
             query.andWhere("event_participants.rsvp", "AWAITING");
@@ -201,11 +199,21 @@ export const fetchAllEvents = async (user_id: number, params: AllEventsQueryPara
         }
     }
 
-    // date-filtering
-        query.where("events.event_date", ">=", start_date);
-        query.where("events.event_date", "<=", end_date);
+    // Apply Public / Private visibility conditionally
+    // If isPublic is undefined, we don't attach this constraint, effectively returning "All"
+    if (typeof isPublic === 'boolean') {
+        query.andWhere("events.is_public", isPublic);
+    } else if (!isOrganized && !isParticipating && isPublic === undefined) {
+        // Fallback guard: If someone browses an open global discovery feed without choosing
+        // a filter, ensure they aren't accidentally shown other users' private events.
+        query.andWhere("events.is_public", true);
+    }
 
-    // 3. Execute count and data fetch in parallel
+    // Date-filtering
+    query.where("events.event_date", ">=", start_date);
+    query.where("events.event_date", "<=", end_date);
+
+    // Execute count and data fetch in parallel
     const [totalResult, events] = await Promise.all([
         query.clone().count("events.id as total").first(),
         query.clone()
@@ -216,7 +224,6 @@ export const fetchAllEvents = async (user_id: number, params: AllEventsQueryPara
                 "events.is_public",
                 "users.email as organizer_email",
                 "users.profile_picture as organizer_profile_picture",
-                // Include rsvp if it's a participation query
                 isParticipating ? "event_participants.rsvp" : database.raw('NULL as rsvp')
             )
             .limit(limit)
@@ -231,7 +238,6 @@ export const fetchAllEvents = async (user_id: number, params: AllEventsQueryPara
     const totalEvents = parseInt(totalResult?.total as string) || 0;
     const totalPages = Math.ceil(totalEvents / limit);
 
-    // 4. Return Data with Metadata
     return {
         events,
         metadata: {
@@ -242,8 +248,6 @@ export const fetchAllEvents = async (user_id: number, params: AllEventsQueryPara
         }
     };
 };
-
-// eventServices.ts
 
 /**
  * Fetches an event by ID with authorization checks.
@@ -476,11 +480,11 @@ export const removeEventParticipationById = async(
         .where({ event_id, user_id })
         .del();
 
-    // cleanup user_event_tags for the id if any THIS BLOCK SHALL BE NOT NEEDED AFTERWARDS, AS user_event_tags has been updated to reference event_participants !!!
+    /*// cleanup user_event_tags for the id if any THIS BLOCK SHALL BE NOT NEEDED AFTERWARDS, AS user_event_tags has been updated to reference event_participants !!!
     // REMOVE THIS LATER ON MIGRATION
     await database("user_event_tags")
         .where({event_id, user_id})
-        .del();
+        .del();*/
 
     if (result === 0) {
         logger.warn(`[EVENT-SERVICES] No participation record found for user ${user_id} in event ${event_id}`);

@@ -9,8 +9,6 @@ import {
 } from "../schemas/authSchema";
 import * as authController from "../controllers/authController";
 import {authenticate} from "../middlewares/authenticate";
-import {authorize} from "../middlewares/authorize";
-import {appRoles} from "../constants/roles";
 
 export const authRoutes = Router();
 

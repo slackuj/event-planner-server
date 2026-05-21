@@ -16,6 +16,7 @@ import {otpExpiryDate} from "../utils/otpUtil";
 import {logger} from "../utils/logger";
 import {database} from "../configurations/db";
 import {Token, User, UserSession} from "../types/user";
+import {userRoles} from "../constants/roles";
 
 type registerData = Omit<UserRegisterRequest, "confirm_password">;
 export const register = async (data: registerData) => {
@@ -27,12 +28,11 @@ export const register = async (data: registerData) => {
         .first();
 
     if (existingUser) {
-        if (existingUser.role === "USER") {
-            // return next(/login) + 'account already exist, please login message'
+        if (existingUser.role === userRoles.USER) {
             logger.warn(`[AUTH-SERVICES] [REGISTER] Duplicate Registration attempt: ${email}`);
             throw new Error("User already exists");
         } else {
-            // return next(/confirmMe) + 'account already registered, please confirm message'
+            // user is unconfirmed
             logger.warn(`[AUTH-SERVICES] [REGISTER] Unconfirmed user re-registering: ${email}`);
             throw new Error("User already registered, please confirm your account");
         }
@@ -49,7 +49,6 @@ export const register = async (data: registerData) => {
                 password: hashed_password,
                 name
             });
-            //.returning(["id"]); // MySQL does not support returning
 
         if (!new_user) {
             throw new Error("Registration failed!");
@@ -107,8 +106,8 @@ export const confirmNewUser = async (data: UserConfirmationRequest) => {
         await database.transaction(async (trx) => {
             // Update user role to 'USER'
             await trx("users")
-                .where({ id: token.id })
-                .update({ role: "USER" });
+                .where({ id: token.user_id })
+                .update({ role: userRoles.USER });
 
             // Remove all tokens for user
             await trx("token_table")
@@ -141,7 +140,7 @@ export const resendConfirmationCode = async (data: SendConfirmationCodeRequest) 
     }
 
     // Check if the user is already confirmed
-    if (user.role === "USER") {
+    if (user.role === userRoles.USER) {
         logger.warn(`[AUTH-SERVICES] [RESEND-CODE] Attempt for already confirmed user: ${email}`);
         throw new Error("Account is already confirmed. Please log in.");
     }
@@ -149,6 +148,11 @@ export const resendConfirmationCode = async (data: SendConfirmationCodeRequest) 
     // Send the new code via email
     const code = await mailServices.sendNewAccountConfirmationEmail(email);
     const expires_at = otpExpiryDate();
+
+    // delete old code
+    await database("token_table")
+        .where({user_id: user.id})
+        .del();
 
         // Insert the new code
         await database("token_table").insert({
@@ -174,8 +178,7 @@ export const login = async (data: UserLoginRequest) => {
         throw new Error("The email or password you entered is incorrect.");
     }
 
-    if (user.role === "UNCONFIRMED") {
-        // next(/confirmMe) + message
+    if (user.role === userRoles.UNCONFIRMED) {
         logger.warn(`[AUTH-SERVICES] [LOGIN] Unconfirmed User's login attempt: ${email}`);
         return await resendConfirmationCode({email});
     }

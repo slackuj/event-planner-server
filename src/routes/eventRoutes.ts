@@ -14,7 +14,7 @@ import {
     EventParticipationRequestSchema,
     EventIdParamsSchema,
     AllEventsQueryParamsSchema, EventIdAndUserIdParamsSchema, EventTagsQueryParamsSchema,
-    TagIdParamsSchema, EventIdAndTagIdParamsSchema,
+    EventIdAndTagIdParamsSchema,
 } from "../schemas/eventSchema";
 
 export const eventRoutes = Router();
@@ -117,11 +117,6 @@ eventRoutes.delete(
 /**
  * --- Event Participation (RSVP) Routes ---
  */
-
-// Upsert participation (The route pattern you requested)
-// /events/:event_id/participation/:user_id
-
-// WHICH METHOD TO USE FOR UPSERT OPERATION ???????????????????????
 
 eventRoutes.post(
     "/:event_id/participation/",

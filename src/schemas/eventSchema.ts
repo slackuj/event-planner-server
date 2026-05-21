@@ -93,7 +93,6 @@ export const AllEventsQueryParamsSchema = z.object({
     isPublic: queryBoolean.optional(),
     isRequested: queryBoolean,
     isOrganized: queryBoolean,
-    // Accepts either a raw string to parse OR an already generated Date object
     start_date: queryTimestamp,
     end_date: queryTimestamp,
     sort_order: z.enum(['asc', 'desc']),

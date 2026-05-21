@@ -26,6 +26,9 @@ const envSchema = z.object({
 
     // sendgrid
     SENDGRID_API_KEY: z.string("MISSING SENDGRID_API_KEY"),
+
+    FRONTEND_ORIGIN: z.url("MISSING FRONTEND_ORIGIN"),
+    MYSQL_URI: z.string("MISSING MYSQL_URI"),
 });
 
 const envServer = envSchema.safeParse(process.env);

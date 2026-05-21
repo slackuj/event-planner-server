@@ -3,10 +3,6 @@ import {logger} from "../utils/logger";
 import {database} from "../configurations/db";
 import { Knex } from "knex";
 
-/**
- * Creates a new session in the database.
- * Maps UserSession interface properties to database snake_case columns.
- */
 export const createSession = async (data: UserSession, trx?: Knex.Transaction) => {
     const { user_id, refresh_token, expires_at } = data;
     const qb = trx ? trx("user_sessions") : database("user_sessions");
@@ -21,9 +17,6 @@ export const createSession = async (data: UserSession, trx?: Knex.Transaction) =
     return session;
 };
 
-/**
- * Deletes a session by its refresh token.
- */
 export const deleteSessionByToken = async (refresh_token: string) => {
     await database("user_sessions")
         .where({ refresh_token: refresh_token })

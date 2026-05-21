@@ -93,7 +93,7 @@ export const login = async(
                 { data:
                         {
                             accessToken: response.accessToken,
-                            next: "/dashboard",
+                            next: "/events/my-day",
                         }
                 },
             );
