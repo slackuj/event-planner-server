@@ -56,8 +56,8 @@ export const create = async (data: CreateEventData) => {
             throw new Error("Failed creating new event");
         }
 
-        console.log("[event_id] returned during insert: is it newEvent_id ???");
-        console.log("event_id", event_id);
+        //console.log("[event_id] returned during insert: is it newEvent_id ???");
+        //console.log("event_id", event_id);
 
         return await fetchEventById(event_id, undefined, trx);
     });
@@ -65,10 +65,23 @@ export const create = async (data: CreateEventData) => {
 
 // updates : title, description, event_date, is_public, updated_at using event_id
 export const updateEventById = async (data: UpdateEventRequest, event_id: number, user_id: number) => {
-    const updatedRow = await database<Event>("events").update(data).where({id: event_id, organizer_id: user_id});
-    if (updatedRow === 0) {
+    // Fetch the event first to check its date and verify existence/ownership
+    const event = await database<Event>("events")
+        .where({ id: event_id, organizer_id: user_id })
+        .first();
+
+    if (!event) {
         throw new Error("Failed Updating Event: Inadequate authorization or event does not exists !");
     }
+
+    // Prevent editing if the event date has already passed
+    if (new Date(event.event_date) < new Date()) {
+        throw new Error("Unauthorized: Past events cannot be edited.");
+    }
+
+    // Proceed with the update
+    await database<Event>("events").update(data).where({ id: event_id, organizer_id: user_id });
+
     return await fetchEventById(event_id);
 };
 
@@ -79,7 +92,7 @@ export const updateEventLocationById = async (data: UpdateEventLocationRequest, 
     const slug = slugify(location_name, {lower: true, strict: true});
 
     const event = await database("events")
-        .select<Pick<Event, 'organizer_id' | 'is_public'>>("events.organizer_id", "events.is_public")
+        .select<Pick<Event, 'organizer_id' | 'is_public' | 'event_date'>>("events.organizer_id", "events.is_public", "events.event_date")
         .where("id", event_id)
         .first();
 
@@ -87,33 +100,38 @@ export const updateEventLocationById = async (data: UpdateEventLocationRequest, 
         throw new Error("Event not found.");
     }
 
-    // Authorization: Check if the requester is the organizer
+    // Check if the requester is the organizer
     if (event.organizer_id !== organizer_id) {
         throw new Error("Unauthorized: Cannot update event location.");
     }
 
+    // Prevent editing if the event date has already passed
+    if (new Date(event.event_date) < new Date()) {
+        throw new Error("Unauthorized: Past event locations cannot be edited.");
+    }
+
     return await database.transaction(async (trx) => {
 
-            // upsert location_tag
-            /// this at least updates `updated_at` field, such that we get to fetch recent tags !!!
-            const [upsertResult] = await tagsServices.upsertLocationTag({name: location_name}, trx);
-            if (!upsertResult) {
-                logger.error(`[EVENT-SERVICES] [CREATE-EVENT] failed upserting location_tag`);
-                throw new Error("Failed accessing location. Please try again.");
-            }
+        // upsert location_tag
+        /// this at least updates `updated_at` field, such that we get to fetch recent tags !!!
+        const [upsertResult] = await tagsServices.upsertLocationTag({name: location_name}, trx);
+        if (!upsertResult) {
+            logger.error(`[EVENT-SERVICES] [CREATE-EVENT] failed upserting location_tag`);
+            throw new Error("Failed accessing location. Please try again.");
+        }
 
-            const location_id = await tagsServices.fetchLocationTagId(slug, trx);
+        const location_id = await tagsServices.fetchLocationTagId(slug, trx);
 
-            // upsert user_location_tag
-            // this at least updates `updated_at` field, such that we get to fetch recent tags !!!
+        // upsert user_location_tag
+        // this at least updates `updated_at` field, such that we get to fetch recent tags !!!
         /***********************************************************************************************
-            DATABASE TRANSACTION + USE OF ORGANIZER ID GUARANTEES THE UPDATE IS BEING DONE BY ORGANIZER
-        /***********************************************************************************************/
-            const [upsertResult2] = await tagsServices.upsertUserLocationTag({user_id: organizer_id, tag_id: location_id}, trx);
-            if (!upsertResult2) { // i.e if upsertResult2 === 0
-                logger.error(`[EVENT-SERVICES] [CREATE-EVENT] failed upserting user_location_tag`);
-                throw new Error("Failed accessing location. Please try again.");
-            }
+         DATABASE TRANSACTION + USE OF ORGANIZER ID GUARANTEES THE UPDATE IS BEING DONE BY ORGANIZER
+         /***********************************************************************************************/
+        const [upsertResult2] = await tagsServices.upsertUserLocationTag({user_id: organizer_id, tag_id: location_id}, trx);
+        if (!upsertResult2) { // i.e if upsertResult2 === 0
+            logger.error(`[EVENT-SERVICES] [CREATE-EVENT] failed upserting user_location_tag`);
+            throw new Error("Failed accessing location. Please try again.");
+        }
 
         // Update the Event Location
         await trx("events").update({location_id}).where({id: event_id});
@@ -122,7 +140,6 @@ export const updateEventLocationById = async (data: UpdateEventLocationRequest, 
     });
 };
 
-// authorize in authorize.ts
 // delete event location
 // DONOT DELETE LOCATION TAG FROM user_location_tags TABLE
 // BECAUSE MULTIPLE EVENTS CAN HAVE SAME LOCATION !!!
@@ -162,7 +179,7 @@ export const fetchAllEvents = async (user_id: number, params: AllEventsQueryPara
         end_date = new Date(DEFAULT_END_DATE),
         sort_order = 'desc',
     } = params;
-    console.log("params inside service", params);
+    //console.log("params inside service", params);
 
     const limit = 4;
     const offset = (page - 1) * limit;
@@ -309,9 +326,9 @@ export const addEventParticipation = async(data: Omit<EventParticipant, 'id'>, o
 
     // check for private events or is_organizer
     // fetchEventById EFFECTIVELY SATISFIES CONDITION FOR PUBLIC EVENT OR IS_ORGANIZER !!!
-    // Fetch the event to identify the organizer
+    // Fetch the event to identify the organizer and event date
     const event = await database("events")
-        .select<Pick<Event, 'organizer_id' | 'is_public'>>("events.organizer_id", "events.is_public")
+        .select<Pick<Event, 'organizer_id' | 'is_public' | 'event_date'>>("events.organizer_id", "events.is_public", "events.event_date")
         .where("id", event_id)
         .first();
 
@@ -319,14 +336,19 @@ export const addEventParticipation = async(data: Omit<EventParticipant, 'id'>, o
         throw new Error("Event not found.");
     }
 
-    // Authorization: Check if the requester is the organizer
+    // Check if the requester is the organizer
     if (organizer_id && event.organizer_id !== organizer_id) {
-        throw new Error("Access denied: Cannot add participants.");
+        throw new Error("Unauthorized: Cannot add participants.");
     }
-    // Authorization: Check if event is private and user is not organizer
+    // Check if event is private and user is not organizer
     // allow organizer to join private directly !!!
     if ( !organizer_id && !event.is_public && event.organizer_id !== user_id ) {
         throw new Error("Access denied: Cannot join private events.");
+    }
+
+    //  Prevent joining past events
+    if (new Date(event.event_date) < new Date()) {
+        throw new Error("Access Denied: Cannot join or add participants to a past event.");
     }
 
     const [newParticipation] = await database<EventParticipant>("event_participants")
@@ -336,8 +358,8 @@ export const addEventParticipation = async(data: Omit<EventParticipant, 'id'>, o
         throw new Error("Failed adding Event Participation");
     }
 
-    console.log("[newParticipation] returned during insert: is it newParticipation_id ???");
-    console.log("newParticipation", newParticipation);
+    //console.log("[newParticipation] returned during insert: is it newParticipation_id ???");
+    //console.log("newParticipation", newParticipation);
 
     const participation =  await fetchEventParticipationById({user_id, event_id});
 
@@ -360,6 +382,21 @@ export const updateEventParticipation = async(
     data: Omit<EventParticipant, 'id'>,
 ) => {
     const { event_id, user_id, rsvp } = data;
+
+    // Fetch the event to see if it belongs to the past
+    const event = await database("events")
+        .select<Pick<Event, 'event_date'>>("event_date")
+        .where("id", event_id)
+        .first();
+
+    if (!event) {
+        throw new Error("Event not found.");
+    }
+
+    // Prevent updating RSVP if the event date has already passed
+    if (new Date(event.event_date) < new Date()) {
+        throw new Error("Unauthorized: Cannot update participation status for past events.");
+    }
 
     const updatedEvent = await database<EventParticipant>("event_participants")
         .update("rsvp", rsvp)
@@ -397,10 +434,10 @@ export const fetchEventParticipationById = async(data: Omit<EventParticipant, 'i
         .andWhere("event_participants.user_id", data.user_id)
         .first();
 
-    console.log("eventParticipation", eventParticipation);
+    //console.log("eventParticipation", eventParticipation);
     if(!eventParticipation) {
         logger.warn(`[EVENT-SERVICES] [FETCH-EVENT-PARTICIPATION] failed retrieving event participation for user: ${data.user_id} event:${data.event_id}`);
-        console.log("i am here");
+        //console.log("i am here");
         return { rsvp: undefined };
     }
 
@@ -462,7 +499,7 @@ export const removeEventParticipationById = async(
 
     // Fetch the event to identify the organizer
     const event = await database("events")
-        .select<Pick<Event, 'organizer_id'>>("events.organizer_id")
+        .select<Pick<Event, 'organizer_id' | 'event_date'>>("events.organizer_id", "events.event_date")
         .where("id", event_id)
         .first();
 
@@ -473,6 +510,10 @@ export const removeEventParticipationById = async(
     // Authorization: Check if the requester is the organizer
     if (event.organizer_id !== requester_id) {
         throw new Error("Access denied. Only the organizer is allowed to remove participants.");
+    }
+
+    if (new Date(event.event_date) < new Date()) {
+        throw new Error("Unauthorized: Cannot update participation status for past events.");
     }
 
     // Proceed with removal

@@ -18,6 +18,16 @@ This project provides following features:<br>
 * authorization<br>
 * email verification<br>
 
+# ASSUMPTIONS
+* Users can join/rsvp any public event
+* Organizer can add participant(request participant) to join any public/private events
+* Past events are not editable. Past events can only be deleted.
+* Event Tags can be added to all public/participating events/requested events/past events
+* Location is being stored using Location Tags
+* Location Tags and Event Tags are only deleted from user_location_tags and user_event_tags tables considering the following facts:<br>
+      i. Other users can also add same tags later<br>
+      ii. tags can be used for recommendation !!!!
+
 # TECH STACK
 <br>**Frontend**<br>
 * React
@@ -57,6 +67,7 @@ The backend of this project is hosted at: https://github.com/slackuj/event-plann
 4. Terminal or IDE of your choice<br>
 5. Cloudinary Account<br>
 6. Sendgrid Account<br>
+
 # INSTALLATION
 The following lines of codes are for Ubuntu 25.10.<br>
 These should be similar for other environments.<br>
