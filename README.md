@@ -89,6 +89,9 @@ npm install
 in both frontend and backend<br>
 
 4. Start Docker Compose and Perform Database Seeding
+> command for starting docker compose may differ for you based on your environment and user privileges.
+>
+> make sure to check and do update script in server > package.json for running docker compose
 ```bash
 cd event-planner-server
 npm run docker:up
@@ -114,7 +117,7 @@ npm run start
 cd event-planner-client
 npm run dev
 ```
-<br>**Project should be up and running on your FRONTEND_ORIGIN**<br>
+<br>**Event Planner should be up and running on your FRONTEND_ORIGIN**<br>
 # BUGS 
 Please report any bugs and issues here in this repository or to slackuj@gmail.com.
 
