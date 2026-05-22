@@ -118,6 +118,13 @@ cd event-planner-client
 npm run dev
 ```
 <br>**Event Planner should be up and running on your FRONTEND_ORIGIN**<br>
+<br>**Dummy Users**<br>
+* alice@example.com **password**: passwordPW123#
+* bob@example.com **password**: passwordPW123#
+* charlie@example.com **password**: passwordPW123#
+* diana@example.com **password**: passwordPW123#
+* evan@example.com **password**: passwordPW123#
+
 # BUGS 
 Please report any bugs and issues here in this repository or to slackuj@gmail.com.
 
