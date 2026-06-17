@@ -9,12 +9,10 @@ const knexConfig = {
             database: config.MYSQL_DATABASE,
         },
         migrations: {
-            // Ensure this directory exists or Knex can create it
             directory: "./database/migrations",
             extension: "ts",
         },
         seeds: {
-            // Ensure this directory exists or Knex can create it
             directory: "./database/seeds",
             extension: "ts",
         },

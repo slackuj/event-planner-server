@@ -7,7 +7,6 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc --build",
     "start": "npm run build && node dist/index.js",
-    "docker:up": "sudo docker compose up",
     "migrate:latest": "knex migrate:latest --knexfile src/knexfile.ts",
     "migrate:rollback": "knex migrate:rollback --all --knexfile src/knexfile.ts",
     "db:seed": "knex seed:run --knexfile src/knexfile.ts"

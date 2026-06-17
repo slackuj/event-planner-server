@@ -7,7 +7,16 @@ export const errorHandler = (
     res: Response,
     next: NextFunction,
 ) => {
-    const { status, message } = error;
+    console.error("❌ Backend Error:", error);
 
-    return errorResponse(res, { status, message })
+    const status = error.status || 500;
+
+    //  Shield the user from raw database/code errors
+    let message = error.message;
+    if (status === 500) {
+        message = null;
+    }
+
+    // 4. Return the sanitized response
+    return errorResponse(res, { status, message });
 }
