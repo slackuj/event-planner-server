@@ -17,6 +17,8 @@ import {logger} from "../utils/logger";
 import {database} from "../configurations/db";
 import {Token, User, UserSession} from "../types/user";
 import {userRoles} from "../constants/roles";
+import {AppError} from "../utils/AppError";
+import {httpCodes} from "../constants/httpCodes";
 
 type registerData = Omit<UserRegisterRequest, "confirm_password">;
 export const register = async (data: registerData) => {
@@ -30,11 +32,11 @@ export const register = async (data: registerData) => {
     if (existingUser) {
         if (existingUser.role === userRoles.USER) {
             logger.warn(`[AUTH-SERVICES] [REGISTER] Duplicate Registration attempt: ${email}`);
-            throw new Error("User already exists");
+            throw new AppError("User already exists.", httpCodes.CONFLICT);
         } else {
             // user is unconfirmed
             logger.warn(`[AUTH-SERVICES] [REGISTER] Unconfirmed user re-registering: ${email}`);
-            throw new Error("User already registered, please confirm your account");
+            throw new AppError("User already registered, please confirm your account", httpCodes.CONFLICT);
         }
     }
 
@@ -51,7 +53,7 @@ export const register = async (data: registerData) => {
             });
 
         if (!new_user) {
-            throw new Error("Registration failed!");
+            throw new AppError("Registration failed!", httpCodes.INTERNAL_SERVER_ERROR);
         }
         // send email
         const generatedOTP = await mailServices.sendNewAccountConfirmationEmail(email);
@@ -85,20 +87,20 @@ export const confirmNewUser = async (data: UserConfirmationRequest) => {
     // Validate user existence and current status
     if (!token) {
         logger.warn(`[AUTH-SERVICES] [CONFIRMATION] Attempt for unregistered user: ${email}`);
-        throw new Error("User not registered or no confirmation code found");
+        throw new AppError("User not registered or no confirmation code found", httpCodes.BAD_REQUEST);
     }
 
     // Validate Token Expiration
     // can we use token.expires_at only ?
     if (new Date() > new Date(token.expires_at)) {
         logger.warn(`[AUTH-SERVICES] [CONFIRMATION] Code expired for user: ${email}`);
-        throw new Error("Code Expired");
+        throw new AppError("Code Expired", httpCodes.BAD_REQUEST);
     }
 
     // Validate Confirmation Code
     if (code !== token.confirmation_code) {
         logger.error(`[AUTH-SERVICES] [CONFIRMATION] Invalid code for user: ${email}`);
-        throw new Error("Invalid Confirmation Code");
+        throw new AppError("Invalid Confirmation Code", httpCodes.BAD_REQUEST);
     }
 
     // Atomic Update: Change role and delete the token/s
@@ -118,7 +120,7 @@ export const confirmNewUser = async (data: UserConfirmationRequest) => {
         logger.info(`[AUTH-SERVICES] [CONFIRMATION] Account confirmed successfully: ${email}`);
     } catch (error) {
         logger.error(`[AUTH-SERVICES] [CONFIRMATION] Transaction failed for ${email}:`, error);
-        throw new Error("Failed to confirm account. Please try again.");
+        throw new AppError("Failed to confirm account. Please try again.", httpCodes.INTERNAL_SERVER_ERROR);
     }
 };
 
@@ -136,13 +138,15 @@ export const resendConfirmationCode = async (data: SendConfirmationCodeRequest) 
 
     if (!user) {
         logger.warn(`[AUTH-SERVICES] [RESEND-CODE] Attempt for non-existent user: ${email}`);
-        throw new Error("User not found");
+        // ignoring use enumeration
+        throw new AppError("User not found", httpCodes.NOT_FOUND);
     }
 
     // Check if the user is already confirmed
     if (user.role === userRoles.USER) {
         logger.warn(`[AUTH-SERVICES] [RESEND-CODE] Attempt for already confirmed user: ${email}`);
-        throw new Error("Account is already confirmed. Please log in.");
+        // ignoring user enumeration
+        throw new AppError("Account is already confirmed. Please log in.", httpCodes.BAD_REQUEST);
     }
 
     // Send the new code via email
@@ -175,7 +179,7 @@ export const login = async (data: UserLoginRequest) => {
 
     if (!user) {
         logger.warn(`[AUTH-SERVICES] [LOGIN] User not found: ${email}`);
-        throw new Error("The email or password you entered is incorrect.");
+        throw new AppError("The email or password you entered is incorrect.", httpCodes.UNAUTHORIZED);
     }
 
     if (user.role === userRoles.UNCONFIRMED) {
@@ -187,7 +191,7 @@ export const login = async (data: UserLoginRequest) => {
     const isPasswordMatched = await bcrypt.compare(password, user.password);
     if (!isPasswordMatched) {
         logger.warn(`[AUTH-SERVICES] [LOGIN] Invalid password for: ${email}`);
-        throw new Error("The email or password you entered is incorrect.");
+        throw new AppError("The email or password you entered is incorrect.", httpCodes.UNAUTHORIZED);
     }
 
     // Generate Tokens
@@ -222,7 +226,7 @@ export const refreshAccessToken = async (refreshToken: string) => {
         decoded = jwt.verify(refreshToken, config.JWT_SECRET_REFRESH) as JwtPayload;
     } catch (error) {
         logger.error(`[AUTH-SERVICES] [REFRESH] Invalid refresh token signature`);
-        throw new Error("Invalid refresh token");
+        throw new AppError("Invalid refresh token", httpCodes.UNAUTHORIZED);
     }
 
     // Check if the session exists in the database
@@ -233,7 +237,7 @@ export const refreshAccessToken = async (refreshToken: string) => {
 
     if (!session) {
         logger.warn(`[AUTH-SERVICES] [REFRESH] Session not found or revoked`);
-        throw new Error("Session expired or revoked");
+        throw new AppError("Session expired or revoked", httpCodes.UNAUTHORIZED);
     }
 
     // Fetch the user
@@ -243,7 +247,7 @@ export const refreshAccessToken = async (refreshToken: string) => {
 
     if (!user) {
         logger.error(`[AUTH-SERVICES] [REFRESH] User not found for session: ${session.user_id}`);
-        throw new Error("User no longer exists");
+        throw new AppError("User no longer exists", httpCodes.UNAUTHORIZED);
     }
 
     // new tokens
@@ -289,13 +293,13 @@ export const updatePassword = async (data: Omit<PasswordUpdateRequest, 'confirm_
         .first();
 
     if (!user) {
-        throw new Error("User not found");
+        throw new AppError("User not found", httpCodes.BAD_REQUEST);
     }
 
     // Verify the old password
     const isMatched = await bcrypt.compare(old_password, user.password);
     if (!isMatched) {
-        throw new Error("Invalid current password");
+        throw new AppError("Invalid current password", httpCodes.BAD_REQUEST);
     }
 
     // Hash the new password

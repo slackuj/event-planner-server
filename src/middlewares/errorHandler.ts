@@ -1,5 +1,7 @@
-import { Request, Response, NextFunction } from "express"
+import { Request, Response, NextFunction } from "express";
 import { errorResponse } from "../utils/responseHelper";
+import { AppError } from "../utils/AppError";
+import { httpCodes } from "../constants/httpCodes";
 
 export const errorHandler = (
     error: any,
@@ -9,14 +11,18 @@ export const errorHandler = (
 ) => {
     console.error("❌ Backend Error:", error);
 
-    const status = error.status || 500;
+    const isOperational = error instanceof AppError;
 
-    //  Shield the user from raw database/code errors
-    let message = error.message;
-    if (status === 500) {
-        message = null;
-    }
+    //  Extract status, code, and details cleanly
+    const status = isOperational ? error.status : httpCodes.INTERNAL_SERVER_ERROR.statusCode;
+    const code = isOperational ? error.code : httpCodes.INTERNAL_SERVER_ERROR.code;
+    const details = isOperational ? error.details : null;
 
-    // 4. Return the sanitized response
-    return errorResponse(res, { status, message });
-}
+    //  Data leakage mask: Only override message if it's an unexpected server error
+    const message = (status === 500 && !isOperational)
+        ? "Internal Server Error"
+        : error.message;
+
+    //  Return structured object response
+    return errorResponse(res, { status, message, code, details });
+};

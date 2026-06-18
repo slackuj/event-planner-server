@@ -25,7 +25,7 @@ export const successResponse = (res: Response, { data = null, message = null, me
     });
 };
 
-export const errorResponse = (res: Response, { message = "Something went wrong", code = httpCodes.INTERNAL_SERVER_ERROR.message, details = null, status = httpCodes.INTERNAL_SERVER_ERROR.statusCode }: ErrorParams) => {
+export const errorResponse = (res: Response, { message = "Something went wrong", code = httpCodes.INTERNAL_SERVER_ERROR.code, details = null, status = httpCodes.INTERNAL_SERVER_ERROR.statusCode }: ErrorParams) => {
     return res.status(status).json({
         success: false,
         data: null,

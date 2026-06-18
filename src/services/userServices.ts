@@ -1,6 +1,8 @@
 import { database } from "../configurations/db";
 import { logger } from "../utils/logger";
-import { UpdateUserRequest, User } from "../types/user"; //
+import { UpdateUserRequest, User } from "../types/user";
+import {httpCodes} from "../constants/httpCodes";
+import {AppError} from "../utils/AppError"; //
 
 /**
  * Fetches a user by their numeric ID.
@@ -12,7 +14,7 @@ export const fetchUserById = async (user_id: number) => {
 
     if (!user) {
         logger.error(`[USER-SERVICES] [FETCH] User not found: ${user_id}`);
-        throw new Error("User not found");
+        throw new AppError("User not found", httpCodes.NOT_FOUND);
     }
 
     const { password, role, updated_at, ...User } = user;
@@ -27,7 +29,7 @@ export const fetchUserIdByEmail = async (email: string) => {
 
     if (!user) {
         logger.error(`[USER-SERVICES] [FETCH-USER-ID-BY-EMAIL] User not found: ${email}`);
-        throw new Error("User not found");
+        throw new AppError("User not found", httpCodes.NOT_FOUND);
     }
 
     return user.id;
@@ -45,7 +47,7 @@ export const updateUserById = async (user_id: number, data: Partial<UpdateUserRe
     const updatedUser = await fetchUserById(user_id);
     if (!updatedUser) {
         logger.error(`[USER-SERVICES] [UPDATE] Failed to update non-existent user: ${user_id}`);
-        throw new Error("User does not exist!");
+        throw new AppError("User does not exist!", httpCodes.NOT_FOUND);
     }
 
     logger.info(`[USER-SERVICES] [UPDATE-BY-ID] user updated: ${user_id}`);

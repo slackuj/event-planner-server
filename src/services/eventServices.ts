@@ -15,6 +15,8 @@ import {Knex} from "knex";
 import {logger} from "../utils/logger";
 import {AllEventsQueryParams, EventTagsQueryParams} from "../types/QueryParams";
 import {DEFAULT_END_DATE, DEFAULT_START_DATE} from "../constants/appConstants";
+import {AppError} from "../utils/AppError";
+import {httpCodes} from "../constants/httpCodes";
 
 export const create = async (data: CreateEventData) => {
     const { title, description, event_date, organizer_id, is_public } = data;
@@ -28,7 +30,7 @@ export const create = async (data: CreateEventData) => {
             const [upsertResult] = await tagsServices.upsertLocationTag({name: data.location_name }, trx);
             if (!upsertResult) {
                 logger.error(`[EVENT-SERVICES] [CREATE-EVENT] failed upserting location_tag`);
-                throw new Error("Failed accessing location. Please try again.");
+                throw new AppError("Failed accessing location. Please try again.", httpCodes.INTERNAL_SERVER_ERROR);
             }
 
             location_id = await tagsServices.fetchLocationTagId(data.location_name, trx);
@@ -38,7 +40,7 @@ export const create = async (data: CreateEventData) => {
             const [upsertResult2] = await tagsServices.upsertUserLocationTag({user_id: organizer_id, tag_id: location_id}, trx);
             if (!upsertResult2) { // i.e if upsertResult2 === 0
                 logger.error(`[EVENT-SERVICES] [CREATE-EVENT] failed upserting user_location_tag`);
-                throw new Error("Failed accessing location. Please try again.");
+                throw new AppError("Failed accessing location. Please try again.", httpCodes.INTERNAL_SERVER_ERROR);
             }
         }
 
@@ -53,7 +55,7 @@ export const create = async (data: CreateEventData) => {
         });
 
         if (!event_id) {
-            throw new Error("Failed creating new event");
+            throw new AppError("Failed creating new event", httpCodes.INTERNAL_SERVER_ERROR);
         }
 
         //console.log("[event_id] returned during insert: is it newEvent_id ???");
@@ -71,12 +73,12 @@ export const updateEventById = async (data: UpdateEventRequest, event_id: number
         .first();
 
     if (!event) {
-        throw new Error("Failed Updating Event: Inadequate authorization or event does not exists !");
+        throw new AppError("Failed Updating Event: Inadequate authorization or event does not exists !", httpCodes.NOT_FOUND);
     }
 
     // Prevent editing if the event date has already passed
     if (new Date(event.event_date) < new Date()) {
-        throw new Error("Unauthorized: Past events cannot be edited.");
+        throw new AppError("Unauthorized: Past events cannot be edited.", httpCodes.FORBIDDEN);
     }
 
     // Proceed with the update
@@ -97,17 +99,17 @@ export const updateEventLocationById = async (data: UpdateEventLocationRequest, 
         .first();
 
     if (!event) {
-        throw new Error("Event not found.");
+        throw new AppError("Event not found.", httpCodes.NOT_FOUND);
     }
 
     // Check if the requester is the organizer
     if (event.organizer_id !== organizer_id) {
-        throw new Error("Unauthorized: Cannot update event location.");
+        throw new AppError("Unauthorized: Cannot update event location.", httpCodes.FORBIDDEN);
     }
 
     // Prevent editing if the event date has already passed
     if (new Date(event.event_date) < new Date()) {
-        throw new Error("Unauthorized: Past event locations cannot be edited.");
+        throw new AppError("Unauthorized: Past event locations cannot be edited.", httpCodes.FORBIDDEN);
     }
 
     return await database.transaction(async (trx) => {
@@ -117,7 +119,7 @@ export const updateEventLocationById = async (data: UpdateEventLocationRequest, 
         const [upsertResult] = await tagsServices.upsertLocationTag({name: location_name}, trx);
         if (!upsertResult) {
             logger.error(`[EVENT-SERVICES] [CREATE-EVENT] failed upserting location_tag`);
-            throw new Error("Failed accessing location. Please try again.");
+            throw new AppError("Failed accessing location. Please try again.", httpCodes.INTERNAL_SERVER_ERROR);
         }
 
         const location_id = await tagsServices.fetchLocationTagId(slug, trx);
@@ -130,7 +132,7 @@ export const updateEventLocationById = async (data: UpdateEventLocationRequest, 
         const [upsertResult2] = await tagsServices.upsertUserLocationTag({user_id: organizer_id, tag_id: location_id}, trx);
         if (!upsertResult2) { // i.e if upsertResult2 === 0
             logger.error(`[EVENT-SERVICES] [CREATE-EVENT] failed upserting user_location_tag`);
-            throw new Error("Failed accessing location. Please try again.");
+            throw new AppError("Failed accessing location. Please try again.", httpCodes.INTERNAL_SERVER_ERROR);
         }
 
         // Update the Event Location
@@ -150,7 +152,7 @@ export const deleteEventLocationById = async(event_id: number, organizer_id: num
         .update("location_id", null);
 
     if (event === 0) {
-        throw new Error("Failed Deleting Event Location: Inadequate authorization or event does not exists!");
+        throw new AppError("Failed Deleting Event Location: Inadequate authorization or event does not exists!", httpCodes.FORBIDDEN);
     }
 };
 
@@ -161,7 +163,7 @@ export const deleteEventById = async(event_id: number, user_id: number) => {
         .del();
 
     if (result === 0) {
-        throw new Error("Failed Deleting Event: Inadequate Authorization or Event does not exists!");
+        throw new AppError("Failed Deleting Event Location: Inadequate authorization or event does not exists!", httpCodes.FORBIDDEN);
     }
 };
 
@@ -249,7 +251,7 @@ export const fetchAllEvents = async (user_id: number, params: AllEventsQueryPara
     ]);
 
     if (!events) {
-        throw new Error("Failed to retrieve events.");
+        throw new AppError("Failed to retrieve events.", httpCodes.INTERNAL_SERVER_ERROR);
     }
 
     const totalEvents = parseInt(totalResult?.total as string) || 0;
@@ -310,7 +312,7 @@ export const fetchEventById = async (id: number, user_id?: number, trx?: Knex.Tr
 
     if (!event) {
         // Generic message for security (don't reveal if ID exists but is private)
-        throw new Error("Event not found or access denied.");
+        throw new AppError("Event not found or access denied.", httpCodes.FORBIDDEN);
     }
 
     return event;
@@ -333,29 +335,29 @@ export const addEventParticipation = async(data: Omit<EventParticipant, 'id'>, o
         .first();
 
     if (!event) {
-        throw new Error("Event not found.");
+        throw new AppError("Event not found.", httpCodes.NOT_FOUND);
     }
 
     // Check if the requester is the organizer
     if (organizer_id && event.organizer_id !== organizer_id) {
-        throw new Error("Unauthorized: Cannot add participants.");
+        throw new AppError("Unauthorized: Cannot add participants.", httpCodes.FORBIDDEN);
     }
     // Check if event is private and user is not organizer
     // allow organizer to join private directly !!!
     if ( !organizer_id && !event.is_public && event.organizer_id !== user_id ) {
-        throw new Error("Access denied: Cannot join private events.");
+        throw new AppError("Access denied: Cannot join private events.", httpCodes.FORBIDDEN);
     }
 
     //  Prevent joining past events
     if (new Date(event.event_date) < new Date()) {
-        throw new Error("Access Denied: Cannot join or add participants to a past event.");
+        throw new AppError("Access Denied: Cannot join or add participants to a past event.", httpCodes.FORBIDDEN);
     }
 
     const [newParticipation] = await database<EventParticipant>("event_participants")
         .insert(data);
 
     if (!newParticipation) {
-        throw new Error("Failed adding Event Participation");
+        throw new AppError("Failed adding Event Participation", httpCodes.INTERNAL_SERVER_ERROR);
     }
 
     //console.log("[newParticipation] returned during insert: is it newParticipation_id ???");
@@ -367,7 +369,7 @@ export const addEventParticipation = async(data: Omit<EventParticipant, 'id'>, o
      **************** --- HANDLE THIS undefined return LATER --- **********************************
      *********************************************************************************************/
     if (!participation) {
-        throw new Error("Error fetching Event Participation.");
+        throw new AppError("Error fetching Event Participation.", httpCodes.INTERNAL_SERVER_ERROR);
     }
 
     return participation;
@@ -390,12 +392,12 @@ export const updateEventParticipation = async(
         .first();
 
     if (!event) {
-        throw new Error("Event not found.");
+        throw new AppError("Event not found.", httpCodes.NOT_FOUND);
     }
 
     // Prevent updating RSVP if the event date has already passed
     if (new Date(event.event_date) < new Date()) {
-        throw new Error("Unauthorized: Cannot update participation status for past events.");
+        throw new AppError("Unauthorized: Cannot update participation status for past events.", httpCodes.FORBIDDEN);
     }
 
     const updatedEvent = await database<EventParticipant>("event_participants")
@@ -403,7 +405,7 @@ export const updateEventParticipation = async(
         .where({event_id, user_id});
 
     if (updatedEvent === 0) {
-        throw new Error("Event Participation not found.");
+        throw new AppError("Event Participation not found.", httpCodes.BAD_REQUEST);
     }
 
     const participation =  await fetchEventParticipationById({
@@ -415,7 +417,7 @@ export const updateEventParticipation = async(
      **************** --- HANDLE THIS undefined return LATER --- **********************************
      *********************************************************************************************/
     if (!participation) {
-        throw new Error("Error fetching Event Participation.");
+        throw new AppError("Error fetching Event Participation.", httpCodes.INTERNAL_SERVER_ERROR);
     }
 
     return participation;
@@ -472,7 +474,7 @@ export const fetchAllEventParticipationByEventId = async(event_id: number) => { 
     ]);
 
     if (!participants) {
-        throw new Error("Failed to retrieve participants.");
+        throw new AppError("Failed to retrieve participants.", httpCodes.INTERNAL_SERVER_ERROR);
     }
 
     //const totalParticipants = parseInt(totalResult?.total as string) || 0;
@@ -504,16 +506,16 @@ export const removeEventParticipationById = async(
         .first();
 
     if (!event) {
-        throw new Error("Event not found.");
+        throw new AppError("Event not found.", httpCodes.NOT_FOUND);
     }
 
     // Authorization: Check if the requester is the organizer
     if (event.organizer_id !== requester_id) {
-        throw new Error("Access denied. Only the organizer is allowed to remove participants.");
+        throw new AppError("Access denied. Only the organizer is allowed to remove participants.", httpCodes.FORBIDDEN);
     }
 
     if (new Date(event.event_date) < new Date()) {
-        throw new Error("Unauthorized: Cannot update participation status for past events.");
+        throw new AppError("Unauthorized: Cannot update participation status for past events.", httpCodes.FORBIDDEN);
     }
 
     // Proceed with removal
@@ -550,7 +552,7 @@ export const addEventTagById = async(data: CreateUserEventTagRequest) => {
         //console.log("upsertResult", upsertResult);
         if (!tag_id) {
             logger.error(`[EVENT-SERVICES] [ADD-EVENT-TAG] failed upserting location_tag`);
-            throw new Error("Failed accessing event tag. Please try again.");
+            throw new AppError("Failed accessing event tag. Please try again.", httpCodes.INTERNAL_SERVER_ERROR);
         }
 
         //const tag_id = await tagsServices.fetchEventTagId(tag_name, trx);
@@ -560,7 +562,7 @@ export const addEventTagById = async(data: CreateUserEventTagRequest) => {
         const [upsertResult2] = await tagsServices.upsertUserEventTag({user_id, event_id, tag_id}, trx);
         if (!upsertResult2) { // i.e if upsertResult2 === 0
             logger.error(`[EVENT-SERVICES] [ADD-EVENT-TAG] failed upserting user_event_tag`);
-            throw new Error("Failed accessing event. Please try again.");
+            throw new AppError("Failed accessing event. Please try again.", httpCodes.INTERNAL_SERVER_ERROR);
         }
 
         return tag_id;
@@ -591,7 +593,7 @@ export const fetchAllEventTagsById = async(event_id: number, user_id: number, pa
         .first();
 
     if (!event) {
-        throw new Error("Event not found.");
+        throw new AppError("Event not found.", httpCodes.NOT_FOUND);
     }
 
     const { fetchEventOrganizersTags } = params;

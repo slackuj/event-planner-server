@@ -14,6 +14,8 @@ import {Knex} from "knex";
 import {logger} from "../utils/logger";
 import slugify from "slugify";
 import {EventTagsQueryParams} from "../types/QueryParams";
+import {AppError} from "../utils/AppError";
+import {httpCodes} from "../constants/httpCodes";
 
 // create or update updated_at timestamp !!!
 export const upsertLocationTag = async(data: CreateLocationTagRequest, trx?: Knex.Transaction) => {
@@ -65,7 +67,7 @@ export const fetchLocationTagId = async(name: string, trx?: Knex.Transaction) =>
         .first();
     if (!location_tag) {
                 logger.error(`[TAGS-SERVICES] [FETCH-LOCATION-BY-ID] failed accessing location_tag`);
-                throw new Error("Failed accessing location. Please try again.");
+                throw new AppError("Failed accessing location. Please try again.", httpCodes.INTERNAL_SERVER_ERROR);
             }
     return location_tag.id;
 }
@@ -111,7 +113,7 @@ export const fetchEventTagId = async(name: string, trx?: Knex.Transaction) => {
         .first();
     if (!event_tag) {
         logger.error(`[TAGS-SERVICES] [FETCH-EVENT-TAG-BY-ID] failed accessing event_tag`);
-        throw new Error("Failed accessing event tag. Please try again.");
+        throw new AppError("Failed accessing event tag. Please try again.", httpCodes.INTERNAL_SERVER_ERROR);
     }
     return event_tag.id;
 }
