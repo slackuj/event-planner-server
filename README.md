@@ -97,8 +97,6 @@ in both frontend, backend, and project root.<br>
 5. Start Docker Compose and Perform Database Seeding
 > command for starting docker compose may differ for you based on your environment and user privileges. 
 >
-> make sure to check and do update script in server > package.json for running docker compose
->
 > make sure you are in project root directory i.e event-planner/
 ```bash
 docker compose up
