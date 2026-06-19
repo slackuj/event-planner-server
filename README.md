@@ -6,7 +6,7 @@ This project demonstrates practical full-stack development skills in a real-worl
 # FEATURES
 This project provides following features:<br>
 <br>**Event Management**<br>
-* create, edit, delte, join events <br>
+* create, edit, delete, join events <br>
 * rsvp, tags<br>
 * surf events, filter events, public events, private events<br>
 * manage event participants<br>
@@ -58,7 +58,7 @@ This project provides following features:<br>
 # FRONTEND
 The frontend of this project is hosted at: https://github.com/slackuj/event-planner-client<br>
 # BACKEND
-The backend of this project is hosted at: https://github.com/slackuj/event-planner-server/tree/master<br>
+The backend of this project is hosted at: https://github.com/slackuj/event-planner-server<br>
 
 # REQUIREMENTS
 1. Docker Compose<br>
@@ -73,49 +73,47 @@ The following lines of codes are for Ubuntu 25.10.<br>
 These should be similar for other environments.<br>
 <br>
 > You can use npx degit for cloning if you don't want to copy the git history !!!<br>
-1. Clone Frontend in an empty project directory: <br>
+1. Clone project root repository: <br>
+```bash
+git clone https://github.com/slackuj/event-planner.git
+cd event-planner
+```
+> You do not need to run `npm install` if you only want to run the project !!!
+2. Clone Frontend inside event-planner-client directory: <br>
 ```bash
 git clone https://github.com/slackuj/event-planner-client.git
 cd event-planner-client
 npm install
 ```
-2. Clone Backend in an empty project directory: <br>
+3. Clone Backend inside event-planner-server directory: <br>
 ```bash
 git clone https://github.com/slackuj/event-planner-server.git
 cd event-planner-server
 npm install
 ```
-3. Set up all required environment variables as specified in `.env.example` file into `.env` file<br>
-in both frontend and backend<br>
+4. Set up all required environment variables as specified in `.env.example` file into `.env` file<br>
+in both frontend, backend, and project root.<br>
 
-4. Start Docker Compose and Perform Database Seeding
-> command for starting docker compose may differ for you based on your environment and user privileges.
+5. Start Docker Compose and Perform Database Seeding
+> command for starting docker compose may differ for you based on your environment and user privileges. 
 >
 > make sure to check and do update script in server > package.json for running docker compose
+>
+> make sure you are in project root directory i.e event-planner/
 ```bash
-cd event-planner-server
-npm run docker:up
-npm run migrate:latest
-npm run db:seed
+docker compose up
+docker compose exec backend npm run migrate:latest
+docker compose exec backend npm run db:seed
 ```
-> If it is not your first attemt for migration, You may need to run `npm run migrate:rollback` before `npm run migrate:latest`.
+> If it is not your first attempt for migration, You may need to run `docker compose exec npm run migrate:rollback` before `docker compose exec backend npm run migrate:latest`.
 > 
 > You need to run migration and seeding only once !
 
 # START GUIDE
-You can now run the project using following steps:<br>
-Make sure docker compose is running !!!!<br>
-<br> You may need to use multiple terminals or multiple terminal tabs in the IDE.<br>
-<br>**Start Backend**<br>
+The project is up and running at **FRONTEND_ORIGIN**<br>
+Next time, you can now run the project using:<br>
 ```bash
-cd event-planner-server
-npm run docker:up
-npm run start
-```
-<br>**Start Frontend**<br>
-```bash
-cd event-planner-client
-npm run dev
+docker compose up
 ```
 <br>**Event Planner should be up and running on your FRONTEND_ORIGIN**<br>
 <br>**Dummy Users**<br>
@@ -124,8 +122,5 @@ npm run dev
 * charlie@example.com **password**: passwordPW123#
 * diana@example.com **password**: passwordPW123#
 * evan@example.com **password**: passwordPW123#
-
 # BUGS 
 Please report any bugs and issues here in this repository or to slackuj@gmail.com.
-
-
